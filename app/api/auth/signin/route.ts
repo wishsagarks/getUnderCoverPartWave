@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { signIn } from '@/lib/auth';
+import { createServerComponentClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,12 +12,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const result = await signIn(email, password);
-    return NextResponse.json(result);
+    const supabase = createServerComponentClient();
+
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password
+    });
+
+    if (error) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 401 }
+      );
+    }
+
+    return NextResponse.json({ 
+      user: data.user,
+      session: data.session 
+    });
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to sign in' },
-      { status: 401 }
+      { status: 500 }
     );
   }
 }

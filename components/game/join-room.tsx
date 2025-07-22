@@ -5,13 +5,14 @@ import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/aceternity/card';
 import { Button } from '@/components/aceternity/button';
-import { getAuthToken } from '@/lib/client-auth-helpers';
+import { createClientComponentClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { UserPlusIcon, HashIcon } from 'lucide-react';
 
 export function JoinRoom() {
   const { user } = useAuth();
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [roomCode, setRoomCode] = useState('');
   const [username, setUsername] = useState(user?.username || '');
   const [loading, setLoading] = useState(false);
@@ -25,27 +26,57 @@ export function JoinRoom() {
     setError('');
 
     try {
-      const response = await fetch('/api/game/join', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
-        },
-        body: JSON.stringify({
-          roomCode: roomCode.trim().toUpperCase(),
-          username: username.trim()
-        })
-      });
-
-      const data = await response.json();
+      const upperRoomCode = roomCode.trim().toUpperCase();
       
-      if (!response.ok) {
-        setError(data.error);
+      // Check if room exists and has space
+      const { data: room, error: roomError } = await supabase
+        .from('rooms')
+        .select(`
+          *,
+          players:players(count)
+        `)
+        .eq('room_code', upperRoomCode)
+        .single();
+
+      if (roomError || !room) {
+        setError('Room not found');
         return;
       }
 
-      if (data.room) {
-        router.push(`/game/${roomCode.trim().toUpperCase()}`);
+      const playerCount = room.players?.[0]?.count || 0;
+      if (playerCount >= room.max_players) {
+        setError('Room is full');
+        return;
+      }
+
+      // Check if user is already in the room
+      const { data: existingPlayer } = await supabase
+        .from('players')
+        .select('id')
+        .eq('room_id', room.id)
+        .eq('user_id', user.id)
+        .single();
+
+      if (existingPlayer) {
+        setError('Already in this room');
+        return;
+      }
+
+      // Join the room
+      const { error: playerError } = await supabase
+        .from('players')
+        .insert({
+          room_id: room.id,
+          user_id: user.id,
+          username: username.trim()
+        });
+
+      if (playerError) {
+        setError(playerError.message);
+        return;
+      }
+
+      router.push(`/game/${upperRoomCode}`);
       }
     } catch (err) {
       setError('Failed to join room. Please try again.');

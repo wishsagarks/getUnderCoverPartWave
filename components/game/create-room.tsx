@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/aceternity/card';
 import { Button } from '@/components/aceternity/button';
 import { Badge } from '@/components/aceternity/badge';
-import { getAuthToken } from '@/lib/client-auth-helpers';
+import { createClientComponentClient } from '@/lib/supabase';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   PlusIcon, 
@@ -18,6 +18,7 @@ import {
 export function CreateRoom() {
   const { user } = useAuth();
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [maxPlayers, setMaxPlayers] = useState(8);
   const [wordPacks, setWordPacks] = useState<any[]>([]);
   const [selectedWordPack, setSelectedWordPack] = useState<any>(null);
@@ -45,24 +46,47 @@ export function CreateRoom() {
     setError('');
 
     try {
-      const response = await fetch('/api/game/create', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${getAuthToken()}`
-        },
-        body: JSON.stringify({ maxPlayers })
-      });
+      // Generate room code
+      const { data: roomCode, error: roomCodeError } = await supabase
+        .rpc('generate_room_code');
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        setError(data.error);
+      if (roomCodeError) {
+        setError('Failed to generate room code');
         return;
       }
 
-      if (data.room_code) {
-        router.push(`/game/${data.room_code}`);
+      // Create room
+      const { data: room, error: roomError } = await supabase
+        .from('rooms')
+        .insert({
+          room_code: roomCode,
+          host_id: user.id,
+          max_players: maxPlayers
+        })
+        .select()
+        .single();
+
+      if (roomError) {
+        setError(roomError.message);
+        return;
+      }
+
+      // Add host as first player
+      const { error: playerError } = await supabase
+        .from('players')
+        .insert({
+          room_id: room.id,
+          user_id: user.id,
+          username: user.username
+        });
+
+      if (playerError) {
+        setError(playerError.message);
+        return;
+      }
+
+      if (room.room_code) {
+        router.push(`/game/${room.room_code}`);
       }
     } catch (err) {
       setError('Failed to create room. Please try again.');

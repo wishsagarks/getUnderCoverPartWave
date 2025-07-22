@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BackgroundBeams } from "@/components/aceternity/background-beams";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate-effect";
 import { ThemeToggle } from "@/components/aceternity/theme-toggle";
-import { setAuthToken } from "@/lib/client-auth-helpers";
+import { createClientComponentClient } from "@/lib/supabase";
 import { 
   PlayIcon,
   UserPlusIcon,
@@ -19,6 +19,7 @@ import {
 
 export function SignInPage() {
   const router = useRouter();
+  const supabase = createClientComponentClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,21 +33,17 @@ export function SignInPage() {
     setError("");
 
     try {
-      const response = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        setError(data.error);
+      if (error) {
+        setError(error.message);
         return;
       }
 
-      if (data.token) {
-        setAuthToken(data.token);
+      if (data.user) {
         router.push('/game');
       }
     } catch (err) {
@@ -57,7 +54,20 @@ export function SignInPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    setError('Google sign-in coming soon! Please use email for now.');
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/game`
+        }
+      });
+      
+      if (error) {
+        setError(error.message);
+      }
+    } catch (err) {
+      setError('Failed to sign in with Google');
+    }
   };
 
   return (
