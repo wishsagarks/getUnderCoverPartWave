@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from 'react';
-import { getCurrentUser, getAuthToken, removeAuthToken } from '@/lib/auth';
+import { getAuthToken, removeAuthToken } from '@/lib/client-auth-helpers';
 
 export interface User {
   id: string;
@@ -14,12 +14,31 @@ export function useAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = getAuthToken();
-    if (token) {
-      const currentUser = getCurrentUser(token);
-      setUser(currentUser);
-    }
-    setLoading(false);
+    const fetchUser = async () => {
+      const token = getAuthToken();
+      if (token) {
+        try {
+          const response = await fetch('/api/auth/session', {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setUser(userData.user);
+          } else {
+            removeAuthToken();
+          }
+        } catch (error) {
+          console.error('Failed to fetch user:', error);
+          removeAuthToken();
+        }
+      }
+      setLoading(false);
+    };
+
+    fetchUser();
   }, []);
 
   const signOut = () => {

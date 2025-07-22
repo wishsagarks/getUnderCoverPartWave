@@ -7,7 +7,6 @@ import { Button } from '@/components/aceternity/button';
 import { Badge } from '@/components/aceternity/badge';
 import { useGame } from '@/hooks/useGame';
 import { useAuth } from '@/hooks/useAuth';
-import { getWordPacks } from '@/lib/supabase';
 import { 
   UsersIcon, 
   PlayIcon, 

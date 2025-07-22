@@ -6,8 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/aceternity/card';
 import { Button } from '@/components/aceternity/button';
 import { Badge } from '@/components/aceternity/badge';
-import { createRoom, getWordPacks } from '@/lib/supabase';
-import { getAuthToken } from '@/lib/auth';
+import { getAuthToken } from '@/lib/client-auth-helpers';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   PlusIcon, 

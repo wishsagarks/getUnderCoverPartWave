@@ -49,7 +49,7 @@ export function useGame(roomCode: string) {
     try {
       const response = await fetch(`/api/game/${roomCode}`, {
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('auth_token') : ''}`
         }
       });
 
@@ -91,7 +91,7 @@ export function useGame(roomCode: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('auth_token') : ''}`
         },
         body: JSON.stringify({ playerId: currentPlayer.id, clue })
       });
@@ -115,7 +115,7 @@ export function useGame(roomCode: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('auth_token') : ''}`
         },
         body: JSON.stringify({
           roomId: room.id,
@@ -144,7 +144,7 @@ export function useGame(roomCode: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('auth_token')}`
+          'Authorization': `Bearer ${typeof window !== 'undefined' ? localStorage.getItem('auth_token') : ''}`
         },
         body: JSON.stringify({ roomId: room.id, wordPack })
       });

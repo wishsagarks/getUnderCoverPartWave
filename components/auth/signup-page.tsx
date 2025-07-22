@@ -9,8 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BackgroundBeams } from "@/components/aceternity/background-beams";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate-effect";
 import { ThemeToggle } from "@/components/aceternity/theme-toggle";
-import { signInWithGoogle, signUpWithEmail } from "@/lib/supabase";
-import { setAuthToken } from "@/lib/auth";
+import { setAuthToken } from "@/lib/client-auth-helpers";
 import { 
   PlayIcon,
   UserPlusIcon,
