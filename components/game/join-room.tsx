@@ -77,7 +77,6 @@ export function JoinRoom() {
       }
 
       router.push(`/game/${upperRoomCode}`);
-      }
     } catch (err) {
       setError('Failed to join room. Please try again.');
     } finally {
