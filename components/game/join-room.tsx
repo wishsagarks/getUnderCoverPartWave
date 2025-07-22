@@ -13,7 +13,7 @@ export function JoinRoom() {
   const { user } = useAuth();
   const router = useRouter();
   const [roomCode, setRoomCode] = useState('');
-  const [username, setUsername] = useState(user?.user_metadata?.username || '');
+  const [username, setUsername] = useState(user?.username || '');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 

@@ -65,7 +65,7 @@ export function GameDashboard() {
             Game Dashboard
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-300">
-            Welcome back, {user.user_metadata?.username || user.email}!
+            Welcome back, {user.username || user.email}!
           </p>
         </motion.div>
 
@@ -213,11 +213,11 @@ export function GameDashboard() {
                 <div className="space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-gradient-to-r from-cyan-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-                      {(user.user_metadata?.username || user.email || 'U').charAt(0).toUpperCase()}
+                      {(user.username || user.email || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">
-                        {user.user_metadata?.username || 'Player'}
+                        {user.username || 'Player'}
                       </p>
                       <p className="text-sm text-gray-600 dark:text-gray-300">
                         {user.email}
