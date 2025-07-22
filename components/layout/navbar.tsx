@@ -5,9 +5,12 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Button } from "@/components/aceternity/button";
 import { ThemeToggle } from "@/components/aceternity/theme-toggle";
+import { useAuth } from "@/hooks/useAuth";
 
 
 export function Navbar() {
+  const { user, signOut } = useAuth();
+
   return (
     <motion.nav
       initial={{ y: -100, opacity: 0 }}
@@ -55,25 +58,52 @@ export function Navbar() {
           {/* Right side buttons */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             <ThemeToggle />
-            <Button
-              variant="ghost"
-              size="sm"
-              className="text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400"
-            >
-              <Link href="/signin">
-                <span className="hidden sm:inline">Sign In</span>
-                <span className="sm:hidden">Sign In</span>
-              </Link>
-            </Button>
-            <Button
-              size="sm"
-              className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg text-xs sm:text-sm px-3 sm:px-4"
-            >
-              <Link href="/game">
-                <span className="hidden sm:inline">Play Now</span>
-                <span className="sm:hidden">Play</span>
-              </Link>
-            </Button>
+            {user ? (
+              <>
+                <span className="text-sm text-gray-700 dark:text-gray-300 hidden sm:inline">
+                  {user.username}
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={signOut}
+                  className="text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400"
+                >
+                  Sign Out
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg text-xs sm:text-sm px-3 sm:px-4"
+                >
+                  <Link href="/game">
+                    <span className="hidden sm:inline">Play Now</span>
+                    <span className="sm:hidden">Play</span>
+                  </Link>
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400"
+                >
+                  <Link href="/signin">
+                    <span className="hidden sm:inline">Sign In</span>
+                    <span className="sm:hidden">Sign In</span>
+                  </Link>
+                </Button>
+                <Button
+                  size="sm"
+                  className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg text-xs sm:text-sm px-3 sm:px-4"
+                >
+                  <Link href="/game">
+                    <span className="hidden sm:inline">Play Now</span>
+                    <span className="sm:hidden">Play</span>
+                  </Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </div>

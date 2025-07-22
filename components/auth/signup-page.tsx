@@ -10,6 +10,7 @@ import { BackgroundBeams } from "@/components/aceternity/background-beams";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate-effect";
 import { ThemeToggle } from "@/components/aceternity/theme-toggle";
 import { signInWithGoogle, signUpWithEmail } from "@/lib/supabase";
+import { setAuthToken } from "@/lib/auth";
 import { 
   PlayIcon,
   UserPlusIcon,
@@ -33,14 +34,21 @@ export function SignUpPage() {
     setError("");
 
     try {
-      const { data, error: signUpError } = await signUpWithEmail(email, password, username);
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, username })
+      });
       
-      if (signUpError) {
-        setError(signUpError.message);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error);
         return;
       }
 
-      if (data.user) {
+      if (data.token) {
+        setAuthToken(data.token);
         router.push('/game');
       }
     } catch (err) {
@@ -51,21 +59,7 @@ export function SignUpPage() {
   };
 
   const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setError("");
-
-    try {
-      const { error: signInError } = await signInWithGoogle();
-      
-      if (signInError) {
-        setError(signInError.message);
-        setIsLoading(false);
-      }
-      // Success will redirect automatically
-    } catch (err) {
-      setError('Failed to sign in with Google. Please try again.');
-      setIsLoading(false);
-    }
+    setError('Google sign-in coming soon! Please use email for now.');
   };
 
   return (

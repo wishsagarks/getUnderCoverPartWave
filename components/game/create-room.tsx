@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/aceternit
 import { Button } from '@/components/aceternity/button';
 import { Badge } from '@/components/aceternity/badge';
 import { createRoom, getWordPacks } from '@/lib/supabase';
+import { getAuthToken } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   PlusIcon, 
@@ -26,10 +27,13 @@ export function CreateRoom() {
 
   useEffect(() => {
     const fetchWordPacks = async () => {
-      const { data } = await getWordPacks();
-      if (data) {
+      try {
+        const response = await fetch('/api/wordpacks');
+        const data = await response.json();
         setWordPacks(data);
         setSelectedWordPack(data[0]); // Default to first pack
+      } catch (error) {
+        console.error('Failed to fetch word packs:', error);
       }
     };
     fetchWordPacks();
@@ -42,14 +46,23 @@ export function CreateRoom() {
     setError('');
 
     try {
-      const { data, error: createError } = await createRoom(user.id, maxPlayers);
+      const response = await fetch('/api/game/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: JSON.stringify({ maxPlayers })
+      });
 
-      if (createError) {
-        setError(createError.message);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error);
         return;
       }
 
-      if (data) {
+      if (data.room_code) {
         router.push(`/game/${data.room_code}`);
       }
     } catch (err) {

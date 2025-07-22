@@ -30,10 +30,13 @@ export function GameLobby({ roomCode }: GameLobbyProps) {
 
   useEffect(() => {
     const fetchWordPacks = async () => {
-      const { data } = await getWordPacks();
-      if (data) {
+      try {
+        const response = await fetch('/api/wordpacks');
+        const data = await response.json();
         setWordPacks(data);
         setSelectedWordPack(data[0]); // Default to first pack
+      } catch (error) {
+        console.error('Failed to fetch word packs:', error);
       }
     };
     fetchWordPacks();

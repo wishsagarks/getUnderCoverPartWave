@@ -1,28 +1,31 @@
+"use client";
+
 import { useEffect, useState } from 'react';
-import { User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { getCurrentUser, getAuthToken, removeAuthToken } from '@/lib/auth';
+
+export interface User {
+  id: string;
+  email: string;
+  username: string;
+}
 
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    const token = getAuthToken();
+    if (token) {
+      const currentUser = getCurrentUser(token);
+      setUser(currentUser);
+    }
+    setLoading(false);
   }, []);
 
-  return { user, loading };
+  const signOut = () => {
+    removeAuthToken();
+    setUser(null);
+  };
+
+  return { user, loading, signOut };
 }

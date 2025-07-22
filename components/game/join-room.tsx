@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/aceternity/card';
 import { Button } from '@/components/aceternity/button';
 import { joinRoom } from '@/lib/supabase';
+import { getAuthToken } from '@/lib/auth';
 import { useAuth } from '@/hooks/useAuth';
 import { UserPlusIcon, HashIcon } from 'lucide-react';
 
@@ -25,18 +26,26 @@ export function JoinRoom() {
     setError('');
 
     try {
-      const { data, error: joinError } = await joinRoom(
-        roomCode.trim().toUpperCase(),
-        user.id,
-        username.trim()
-      );
+      const response = await fetch('/api/game/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${getAuthToken()}`
+        },
+        body: JSON.stringify({
+          roomCode: roomCode.trim().toUpperCase(),
+          username: username.trim()
+        })
+      });
 
-      if (joinError) {
-        setError(joinError.message);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error);
         return;
       }
 
-      if (data) {
+      if (data.room) {
         router.push(`/game/${roomCode.trim().toUpperCase()}`);
       }
     } catch (err) {
