@@ -25,10 +25,12 @@ export function CTASection() {
             Join thousands of players already enjoying the most engaging word deduction game ever created.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center items-center">
-            <Button size="lg" className="px-6 sm:px-8 py-2.5 sm:py-3 text-base sm:text-lg font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg w-full sm:w-auto">
-              <PlayIcon className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
-              Play Now - It's Free!
-            </Button>
+            <Link href="/game">
+              <Button size="lg" className="px-6 sm:px-8 py-2.5 sm:py-3 text-base sm:text-lg font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg w-full sm:w-auto">
+                <PlayIcon className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
+                Play Now - It's Free!
+              </Button>
+            </Link>
             <Button size="lg" variant="outline" className="px-6 sm:px-8 py-2.5 sm:py-3 text-base sm:text-lg font-semibold border-white/80 text-white hover:bg-white hover:text-blue-600 backdrop-blur-sm w-full sm:w-auto">
               <UserPlusIcon className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
               <Link href="/signin">Create Account</Link>

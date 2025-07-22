@@ -69,7 +69,7 @@ export function Navbar() {
               size="sm"
               className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg text-xs sm:text-sm px-3 sm:px-4"
             >
-              <Link href="/signin">
+              <Link href="/game">
                 <span className="hidden sm:inline">Play Now</span>
                 <span className="sm:hidden">Play</span>
               </Link>

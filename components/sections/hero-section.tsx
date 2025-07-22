@@ -51,10 +51,12 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.6 }}
         >
-          <Button size="lg" className="px-6 sm:px-8 py-3 sm:py-4 text-lg sm:text-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg w-full sm:w-auto">
-            <PlayIcon className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
-            Start Playing Now
-          </Button>
+          <Link href="/game">
+            <Button size="lg" className="px-6 sm:px-8 py-3 sm:py-4 text-lg sm:text-xl font-semibold bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-lg w-full sm:w-auto">
+              <PlayIcon className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
+              Start Playing Now
+            </Button>
+          </Link>
           <Button variant="outline" size="lg" className="px-6 sm:px-8 py-3 sm:py-4 text-lg sm:text-xl font-semibold border-slate-600 text-slate-300 hover:bg-slate-800 hover:text-white w-full sm:w-auto">
             <UserPlusIcon className="mr-2 h-4 sm:h-5 w-4 sm:w-5" />
             <Link href="/signin">Join Game</Link>

@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { BackgroundBeams } from "@/components/aceternity/background-beams";
 import { TextGenerateEffect } from "@/components/aceternity/text-generate-effect";
 import { ThemeToggle } from "@/components/aceternity/theme-toggle";
-import { signInWithGoogle, signInWithEmail } from "@/lib/supabase";
+import { signInWithGoogle, signUpWithEmail } from "@/lib/supabase";
 import { 
   PlayIcon,
   UserPlusIcon,
@@ -17,25 +17,26 @@ import {
   ShieldIcon
 } from "@/components/aceternity/icons";
 
-export function SignInPage() {
+export function SignUpPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !password.trim()) return;
+    if (!email.trim() || !password.trim() || !username.trim()) return;
 
     setIsLoading(true);
     setError("");
 
     try {
-      const { data, error: signInError } = await signInWithEmail(email, password);
+      const { data, error: signUpError } = await signUpWithEmail(email, password, username);
       
-      if (signInError) {
-        setError(signInError.message);
+      if (signUpError) {
+        setError(signUpError.message);
         return;
       }
 
@@ -43,7 +44,7 @@ export function SignInPage() {
         router.push('/game');
       }
     } catch (err) {
-      setError('Failed to sign in. Please try again.');
+      setError('Failed to create account. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -107,11 +108,11 @@ export function SignInPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.2 }}
               >
-                Welcome Back to the Game
+                Join the Party Wave
               </motion.h1>
               
               <TextGenerateEffect 
-                words="Sign in to continue your word deduction adventures and connect with friends worldwide."
+                words="Create your account and start playing the most engaging word deduction game with friends worldwide."
                 className="text-lg text-slate-600 dark:text-slate-300 max-w-lg mx-auto lg:mx-0"
               />
             </div>
@@ -125,24 +126,24 @@ export function SignInPage() {
             >
               <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
                 <ZapIcon className="h-4 w-4 text-cyan-500" />
-                <span>Instant Play</span>
+                <span>Free Forever</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
                 <ShieldIcon className="h-4 w-4 text-green-500" />
-                <span>Secure Login</span>
+                <span>Privacy First</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
                 <PlayIcon className="h-4 w-4 text-purple-500" />
-                <span>Save Progress</span>
+                <span>Instant Play</span>
               </div>
               <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
                 <UserPlusIcon className="h-4 w-4 text-blue-500" />
-                <span>Friend Lists</span>
+                <span>Social Gaming</span>
               </div>
             </motion.div>
           </motion.div>
 
-          {/* Right Side - Sign In Form */}
+          {/* Right Side - Sign Up Form */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -152,10 +153,10 @@ export function SignInPage() {
             <Card className="backdrop-blur-sm bg-white/80 dark:bg-slate-800/80 border-slate-200/50 dark:border-slate-700/50 shadow-2xl">
               <CardHeader className="text-center space-y-2">
                 <CardTitle className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                  Sign In
+                  Create Account
                 </CardTitle>
                 <CardDescription className="text-slate-600 dark:text-slate-300">
-                  Enter your credentials to access your account
+                  Join thousands of players worldwide
                 </CardDescription>
               </CardHeader>
               
@@ -166,7 +167,7 @@ export function SignInPage() {
                   </div>
                 )}
 
-                {/* Google Sign In */}
+                {/* Google Sign Up */}
                 <Button
                   onClick={handleGoogleSignIn}
                   disabled={isLoading}
@@ -189,13 +190,28 @@ export function SignInPage() {
                   </div>
                   <div className="relative flex justify-center text-sm">
                     <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                      Or continue with email
+                      Or create with email
                     </span>
                   </div>
                 </div>
 
                 {/* Email/Password Form */}
-                <form onSubmit={handleSignIn} className="space-y-4">
+                <form onSubmit={handleSignUp} className="space-y-4">
+                  <div className="space-y-2">
+                    <label htmlFor="username" className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                      Username
+                    </label>
+                    <input
+                      id="username"
+                      type="text"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      placeholder="Choose a username"
+                      className="w-full h-12 px-4 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
+                      required
+                    />
+                  </div>
+
                   <div className="space-y-2">
                     <label htmlFor="email" className="text-sm font-medium text-slate-700 dark:text-slate-300">
                       Email
@@ -220,43 +236,33 @@ export function SignInPage() {
                       type="password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Enter your password"
+                      placeholder="Create a password"
                       className="w-full h-12 px-4 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400 focus:ring-2 focus:ring-cyan-500 focus:border-transparent transition-all duration-200"
                       required
                     />
                   </div>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <label className="flex items-center space-x-2 text-slate-600 dark:text-slate-300">
-                      <input type="checkbox" className="rounded border-slate-300 dark:border-slate-600" />
-                      <span>Remember me</span>
-                    </label>
-                    <Link href="/forgot-password" className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 font-medium">
-                      Forgot password?
-                    </Link>
-                  </div>
-
                   <Button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || !email.trim() || !password.trim() || !username.trim()}
                     className="w-full h-12 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white font-semibold shadow-lg"
                   >
                     {isLoading ? (
                       <div className="flex items-center space-x-2">
                         <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                        <span>Signing in...</span>
+                        <span>Creating account...</span>
                       </div>
                     ) : (
-                      "Sign In"
+                      "Create Account"
                     )}
                   </Button>
                 </form>
 
-                {/* Sign Up Link */}
+                {/* Sign In Link */}
                 <div className="text-center text-sm text-slate-600 dark:text-slate-300">
-                  Don't have an account?{" "}
-                  <Link href="/signup" className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 font-medium">
-                    Sign up for free
+                  Already have an account?{" "}
+                  <Link href="/signin" className="text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 font-medium">
+                    Sign in here
                   </Link>
                 </div>
               </CardContent>
