@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,31 +13,21 @@ import {
   Eye, 
   EyeOff, 
   Play, 
-  RotateCcw, 
   Trophy,
-  Clock,
   Target,
   Shield,
-  Zap,
-  Settings,
-  Crown,
-  Sparkles,
   Timer,
   Vote,
   MessageCircle,
   Star,
-  Award,
-  Gamepad2,
   UserPlus,
   Shuffle,
-  Share2,
-  Home,
   ChevronRight,
   CheckCircle,
   AlertCircle,
-  Volume2
+  Volume2,
+  Users
 } from "lucide-react"
-import { SingleDeviceGame } from "@/components/local/single-device-game"
 import { getWordPacks, saveGameConfig, LocalGameConfig, WordPack, getRandomAvatar, assignRolesAndWords, generateSpeakingOrder, calculateElimination, checkWinCondition } from "@/lib/supabase-local-game"
 
 interface Player {
@@ -63,6 +53,26 @@ interface GameStats {
   undercoverWins: number
   roundsPlayed: number
   mvpPlayer?: string
+}
+
+type GamePhase = 'host-config' | 'player-setup' | 'role-reveal' | 'clue-giving' | 'discussion' | 'voting' | 'elimination' | 'round-end' | 'game-end'
+
+interface GameConfig {
+  playerCount: number
+  undercoverCount: number
+  mrXCount: number
+  wordPackId: string
+  rounds: number
+  spectatorVoting: boolean
+  minigamesEnabled: boolean
+  observerMode: boolean
+  discussionTimer: boolean
+  animatedScoreboard: boolean
+}
+
+interface Player extends LocalPlayer {
+  isObserver: boolean
+  hasVoted: boolean
 }
 
 export function LocalMultiplayer() {

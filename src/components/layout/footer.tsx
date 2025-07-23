@@ -1,4 +1,3 @@
-import React from "react"
 import { Link } from "react-router-dom"
 import { motion } from "framer-motion"
 import { Github, Twitter, Mail, Heart, Gamepad2, Users, Zap } from "lucide-react"

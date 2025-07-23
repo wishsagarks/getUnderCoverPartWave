@@ -1,8 +1,7 @@
-import React from "react"
 import { FloatingNav } from "@/components/ui/floating-navbar"
 import { ModeToggle } from "@/components/ui/mode-toggle"
 import { useAuth } from "@/contexts/AuthContext"
-import { Home, Gamepad2, Users, Info, LogOut } from "lucide-react"
+import { Home, Gamepad2, Users, LogOut } from "lucide-react"
 
 export function Navbar() {
   const { user, signOut } = useAuth()

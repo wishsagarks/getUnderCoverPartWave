@@ -13,6 +13,7 @@ export interface LocalGameConfig {
   minigamesEnabled: boolean
   observerMode: boolean
   discussionTimer: boolean
+  discussionTimeMinutes: number
   animatedScoreboard: boolean
   createdAt: string
 }

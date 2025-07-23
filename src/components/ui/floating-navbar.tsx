@@ -14,7 +14,7 @@ export const FloatingNav = ({
   }[]
   className?: string
 }) => {
-  const [visible, setVisible] = useState(true)
+  const [visible] = useState(true)
 
   return (
     <AnimatePresence mode="wait">

@@ -1,4 +1,3 @@
-import React from "react"
 import { Navbar } from "@/components/layout/navbar"
 import { HeroSection } from "@/components/sections/hero-section"
 import { FeaturesSection } from "@/components/sections/features-section"
