@@ -30,7 +30,7 @@ export function HeroSection() {
       
       <TextGenerateEffect 
         words="The ultimate word deduction party game that brings friends together through clever clues, strategic thinking, and endless fun."
-        className="text-center text-[40px] md:text-5xl lg:text-6xl"
+        className="text-center text-base sm:text-lg md:text-xl max-w-3xl mx-auto text-slate-300"
       />
       
       <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
