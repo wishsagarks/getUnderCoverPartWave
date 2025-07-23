@@ -1,4 +1,3 @@
-import React from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { LandingPage } from '@/components/landing-page'
@@ -8,7 +7,6 @@ import { GameDashboard } from '@/components/game/game-dashboard'
 import { CreateRoom } from '@/components/game/create-room'
 import { JoinRoom } from '@/components/game/join-room'
 import { GameLobby } from '@/components/game/game-lobby'
-import { GameRoom } from '@/components/game/game-room'
 import { LocalMultiplayer } from '@/components/local/local-multiplayer'
 import { SingleDeviceGame } from '@/components/local/single-device-game'
 
