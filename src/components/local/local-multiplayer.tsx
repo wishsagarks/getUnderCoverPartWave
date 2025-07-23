@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { useAuth } from "@/contexts/AuthContext"
+import { createRoom, joinRoom, startGame, submitClue, submitVote, getRoomWithPlayers, subscribeToRoom, wordPacks } from "@/lib/supabase-game"
 import { Link } from "react-router-dom"
 import { 
   ArrowLeft, 
@@ -17,64 +19,6 @@ import {
   Shield,
   Zap
 } from "lucide-react"
-
-// Word packs data
-const wordPacks = [
-  {
-    id: "general",
-    title: "General Pack",
-    description: "Basic words for everyday gameplay",
-    difficulty: "Easy",
-    pairs: [
-      { civilian: "Apple", undercover: "Orange" },
-      { civilian: "Cat", undercover: "Dog" },
-      { civilian: "Coffee", undercover: "Tea" },
-      { civilian: "Summer", undercover: "Winter" },
-      { civilian: "Book", undercover: "Magazine" },
-      { civilian: "Car", undercover: "Bike" },
-      { civilian: "Pizza", undercover: "Burger" },
-      { civilian: "Ocean", undercover: "Lake" },
-      { civilian: "Phone", undercover: "Computer" },
-      { civilian: "Rain", undercover: "Snow" }
-    ]
-  },
-  {
-    id: "technology",
-    title: "Technology Pack",
-    description: "Modern technology and gadgets",
-    difficulty: "Medium",
-    pairs: [
-      { civilian: "iPhone", undercover: "Android" },
-      { civilian: "Netflix", undercover: "YouTube" },
-      { civilian: "Instagram", undercover: "TikTok" },
-      { civilian: "Tesla", undercover: "BMW" },
-      { civilian: "Zoom", undercover: "Teams" },
-      { civilian: "WhatsApp", undercover: "Telegram" },
-      { civilian: "Google", undercover: "Bing" },
-      { civilian: "Spotify", undercover: "Apple Music" },
-      { civilian: "Amazon", undercover: "Flipkart" },
-      { civilian: "Facebook", undercover: "Twitter" }
-    ]
-  },
-  {
-    id: "indian-culture",
-    title: "Indian Culture Pack",
-    description: "Words related to Indian culture and traditions",
-    difficulty: "Medium",
-    pairs: [
-      { civilian: "Dosa", undercover: "Idli" },
-      { civilian: "Bollywood", undercover: "Hollywood" },
-      { civilian: "Cricket", undercover: "Football" },
-      { civilian: "Holi", undercover: "Diwali" },
-      { civilian: "Taj Mahal", undercover: "Red Fort" },
-      { civilian: "Biryani", undercover: "Pulao" },
-      { civilian: "Sari", undercover: "Lehenga" },
-      { civilian: "Mumbai", undercover: "Delhi" },
-      { civilian: "Ganesh", undercover: "Krishna" },
-      { civilian: "Samosa", undercover: "Pakora" }
-    ]
-  }
-]
 
 type GamePhase = 'setup' | 'privacy-check' | 'word-reveal' | 'clue-giving' | 'voting' | 'results' | 'final-results'
 type PlayerRole = 'civilian' | 'undercover'
@@ -107,6 +51,7 @@ interface GameState {
 }
 
 export function LocalMultiplayer() {
+  const { user, isConfigured } = useAuth()
   const [gameState, setGameState] = useState<GameState>({
     players: [],
     currentPlayerIndex: 0,
@@ -128,9 +73,12 @@ export function LocalMultiplayer() {
   const [showWord, setShowWord] = useState(false)
   const [clueInput, setClueInput] = useState("")
   const [selectedVote, setSelectedVote] = useState<number | null>(null)
+  const [useSupabase, setUseSupabase] = useState(false)
+  const [roomCode, setRoomCode] = useState<string>("")
+  const [loading, setLoading] = useState(false)
 
   // Initialize game
-  const startGame = () => {
+  const startLocalGame = () => {
     const selectedPack = wordPacks.find(pack => pack.id === gameState.selectedWordPack)!
     const randomPair = selectedPack.pairs[Math.floor(Math.random() * selectedPack.pairs.length)]
     
@@ -157,6 +105,33 @@ export function LocalMultiplayer() {
       phase: 'privacy-check',
       currentPlayerIndex: 0
     }))
+  }
+
+  // Initialize Supabase game
+  const startSupabaseGame = async () => {
+    if (!user || !isConfigured) return
+    
+    setLoading(true)
+    try {
+      const room = await createRoom(user.id, {
+        maxPlayers: playerCount,
+        wordPack: gameState.selectedWordPack
+      })
+      
+      setRoomCode(room.room_code)
+      
+      // Join as host
+      await joinRoom(room.room_code, user.id, user.user_metadata?.username || user.email)
+      
+      setGameState(prev => ({
+        ...prev,
+        phase: 'privacy-check'
+      }))
+    } catch (error) {
+      console.error('Error creating room:', error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   // Privacy check confirmation
@@ -386,10 +361,72 @@ export function LocalMultiplayer() {
                     </div>
                   </div>
 
-                  <Button onClick={startGame} className="w-full" size="lg">
+                  {/* Game Mode Selection */}
+                  {isConfigured && user && (
+                    <div className="space-y-4">
+                      <label className="block text-sm font-medium">
+                        Game Mode
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Card
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            !useSupabase
+                              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : ''
+                          }`}
+                          onClick={() => setUseSupabase(false)}
+                        >
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Local Mode</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <CardDescription className="text-xs">
+                              Pass and play on one device
+                            </CardDescription>
+                          </CardContent>
+                        </Card>
+                        
+                        <Card
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
+                            useSupabase
+                              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                              : ''
+                          }`}
+                          onClick={() => setUseSupabase(true)}
+                        >
+                          <CardHeader className="pb-2">
+                            <CardTitle className="text-sm">Online Mode</CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <CardDescription className="text-xs">
+                              Create room for remote players
+                            </CardDescription>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button 
+                    onClick={useSupabase && isConfigured ? startSupabaseGame : startLocalGame} 
+                    className="w-full" 
+                    size="lg"
+                    disabled={loading}
+                  >
                     <Play className="w-4 h-4 mr-2" />
-                    Start Game
+                    {loading ? 'Creating...' : useSupabase ? 'Create Online Room' : 'Start Local Game'}
                   </Button>
+                  
+                  {useSupabase && roomCode && (
+                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                      <p className="text-sm text-green-800 dark:text-green-200 mb-2">
+                        Room Created! Share this code:
+                      </p>
+                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+                        {roomCode}
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </motion.div>
