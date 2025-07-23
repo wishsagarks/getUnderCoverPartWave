@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { isSupabaseConfigured } from './supabase'
 import { v4 as uuidv4 } from 'uuid'
 
 export interface LocalGameConfig {
@@ -194,26 +195,36 @@ export const saveGameState = async (gameState: LocalGameState) => {
 // Get word packs from Supabase (with fallback to default)
 export const getWordPacks = async (): Promise<WordPack[]> => {
   try {
+    // Check if Supabase is configured
+    if (!isSupabaseConfigured()) {
+      console.warn('Supabase not configured, using default word packs')
+      return defaultWordPacks
+    }
+
     const { data, error } = await supabase
       .from('word_packs')
       .select('*')
       .eq('is_public', true)
 
-    if (error) throw error
+    if (error) {
+      console.warn('Failed to fetch word packs from Supabase:', error)
+      return defaultWordPacks
+    }
     
     // Combine Supabase packs with default packs
-    const supabasePacks = data?.map(pack => ({
+    const supabasePacks = (data || []).map(pack => ({
       id: pack.id,
       title: pack.title,
       description: pack.description || '',
       type: pack.type as 'curated' | 'custom' | 'ai' | 'community',
       difficulty: pack.difficulty as 'easy' | 'medium' | 'hard',
-      wordPairs: pack.content?.pairs || [],
+      wordPairs: (pack.content as any)?.pairs || [],
       isPublic: pack.is_public,
       createdBy: pack.owner_id
-    })) || []
+    }))
 
-    return [...defaultWordPacks, ...supabasePacks]
+    // If we have Supabase packs, use them, otherwise use defaults
+    return supabasePacks.length > 0 ? supabasePacks : defaultWordPacks
   } catch (error) {
     console.warn('Failed to fetch word packs from Supabase, using defaults:', error)
     return defaultWordPacks
