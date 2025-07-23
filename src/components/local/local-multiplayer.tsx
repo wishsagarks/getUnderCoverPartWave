@@ -38,7 +38,7 @@ import {
   Volume2
 } from "lucide-react"
 import { SingleDeviceGame } from "@/components/local/single-device-game"
-import { getWordPacks, saveGameConfig, LocalGameConfig, WordPack, getRandomAvatar } from "@/lib/supabase-local-game"
+import { getWordPacks, saveGameConfig, LocalGameConfig, WordPack, getRandomAvatar, assignRolesAndWords } from "@/lib/supabase-local-game"
 
 interface Player {
   id: string
