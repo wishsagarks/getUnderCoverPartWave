@@ -170,9 +170,26 @@ export const defaultWordPacks: WordPack[] = [
 
 // Save game configuration to Supabase
 export const saveGameConfig = async (config: LocalGameConfig) => {
+  // Map camelCase to snake_case for database
+  const dbConfig = {
+    id: config.id,
+    player_count: config.playerCount,
+    undercover_count: config.undercoverCount,
+    mrx_count: config.mrXCount,
+    word_pack_id: config.wordPackId,
+    rounds: config.rounds,
+    spectator_voting: config.spectatorVoting,
+    minigames_enabled: config.minigamesEnabled,
+    observer_mode: config.observerMode,
+    discussion_timer: config.discussionTimer,
+    discussion_time_minutes: config.discussionTimeMinutes,
+    animated_scoreboard: config.animatedScoreboard,
+    created_at: config.createdAt
+  }
+
   const { data, error } = await supabase
     .from('local_game_configs')
-    .insert(config)
+    .insert(dbConfig)
     .select()
     .single()
 
