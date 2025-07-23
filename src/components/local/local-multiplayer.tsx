@@ -742,7 +742,7 @@ export function LocalMultiplayer() {
                           </div>
                         )}
                       </Button>
-                    </div>
+             Choose Word Pack ({wordPacks.length} available)
                   )}
                 </CardContent>
               </Card>
@@ -776,7 +776,7 @@ export function LocalMultiplayer() {
                       <p className="text-sm text-slate-300">
                         Only {currentRevealPlayer.name} should see their role and word. 
                         Make sure others are looking away!
-                      </p>
+                     {pack.wordPairs.length} word pairs • Random selection each game
                     </div>
                     
                     <Button 

@@ -293,6 +293,10 @@ export const assignRolesAndWords = async (
   const wordPacks = await getWordPacks()
   const selectedPack = wordPacks.find(pack => pack.id === config.wordPackId) || wordPacks[0]
   const randomPair = selectedPack.wordPairs[Math.floor(Math.random() * selectedPack.wordPairs.length)]
+  // Randomly select a word pair from the pack
+  
+  console.log(`Selected word pack: ${selectedPack.title}`)
+  console.log(`Random word pair selected: Civilian="${randomPair.civilian}", Undercover="${randomPair.undercover}"`)
   
   // Shuffle players for random role assignment
   const shuffledPlayers = [...players].sort(() => Math.random() - 0.5)
