@@ -205,26 +205,38 @@ export const getWordPacks = async (): Promise<WordPack[]> => {
       .from('word_packs')
       .select('*')
       .eq('is_public', true)
+      .order('created_at', { ascending: true })
 
     if (error) {
       console.warn('Failed to fetch word packs from Supabase:', error)
       return defaultWordPacks
     }
     
-    // Combine Supabase packs with default packs
-    const supabasePacks = (data || []).map(pack => ({
-      id: pack.id,
-      title: pack.title,
-      description: pack.description || '',
-      type: pack.type as 'curated' | 'custom' | 'ai' | 'community',
-      difficulty: pack.difficulty as 'easy' | 'medium' | 'hard',
-      wordPairs: (pack.content as any)?.pairs || [],
-      isPublic: pack.is_public,
-      createdBy: pack.owner_id
-    }))
+    // Transform Supabase data to WordPack format
+    const supabasePacks = (data || []).map(pack => {
+      let wordPairs = []
+      try {
+        wordPairs = (pack.content as any)?.pairs || []
+      } catch (e) {
+        console.warn('Failed to parse word pairs for pack:', pack.title)
+        wordPairs = []
+      }
+      
+      return {
+        id: pack.id,
+        title: pack.title,
+        description: pack.description || '',
+        type: pack.type as 'curated' | 'custom' | 'ai' | 'community',
+        difficulty: pack.difficulty as 'easy' | 'medium' | 'hard',
+        wordPairs,
+        isPublic: pack.is_public,
+        createdBy: pack.owner_id
+      }
+    })
 
-    // If we have Supabase packs, use them, otherwise use defaults
-    return supabasePacks.length > 0 ? supabasePacks : defaultWordPacks
+    // Return Supabase packs if available and valid, otherwise use defaults
+    const validPacks = supabasePacks.filter(pack => pack.wordPairs.length > 0)
+    return validPacks.length > 0 ? validPacks : defaultWordPacks
   } catch (error) {
     console.warn('Failed to fetch word packs from Supabase, using defaults:', error)
     return defaultWordPacks
