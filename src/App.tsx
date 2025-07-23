@@ -10,6 +10,7 @@ import { JoinRoom } from '@/components/game/join-room'
 import { GameLobby } from '@/components/game/game-lobby'
 import { GameRoom } from '@/components/game/game-room'
 import { LocalMultiplayer } from '@/components/local/local-multiplayer'
+import { SingleDeviceGame } from '@/components/local/single-device-game'
 
 function App() {
   return (
@@ -24,6 +25,7 @@ function App() {
           <Route path="/game/join" element={<JoinRoom />} />
           <Route path="/game/:roomCode" element={<GameLobby />} />
           <Route path="/local" element={<LocalMultiplayer />} />
+          <Route path="/local/single-device" element={<SingleDeviceGame />} />
         </Routes>
       </div>
     </AuthProvider>

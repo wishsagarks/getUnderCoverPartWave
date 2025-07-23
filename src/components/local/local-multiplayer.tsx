@@ -3,8 +3,9 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { useAuth } from "@/contexts/AuthContext"
-import { createRoom, joinRoom, startGame, submitClue, submitVote, getRoomWithPlayers, subscribeToRoom, wordPacks } from "@/lib/supabase-game"
+import { Meteors } from "@/components/ui/meteors"
+import { Spotlight } from "@/components/ui/spotlight"
+import { BackgroundBeams } from "@/components/ui/background-beams"
 import { Link } from "react-router-dom"
 import { 
   ArrowLeft, 
@@ -17,343 +18,500 @@ import {
   Clock,
   Target,
   Shield,
-  Zap
+  Zap,
+  Settings,
+  Crown,
+  Sparkles,
+  Timer,
+  Vote,
+  MessageCircle,
+  Star,
+  Award,
+  Gamepad2,
+  UserPlus,
+  Shuffle,
+  Share2,
+  Home,
+  ChevronRight,
+  CheckCircle,
+  AlertCircle,
+  Volume2
 } from "lucide-react"
-
-type GamePhase = 'setup' | 'privacy-check' | 'word-reveal' | 'clue-giving' | 'voting' | 'results' | 'final-results'
-type PlayerRole = 'civilian' | 'undercover'
-
-interface Player {
-  id: number
+import { SingleDeviceGame } from "@/components/local/single-device-game"
   name: string
-  role: PlayerRole
-  word: string
-  clue: string
-  isAlive: boolean
-  reminderCount: number
+  avatar: string
+  role: 'civilian' | 'undercover' | 'mrx'
+  word?: string
+  isEliminated: boolean
+  isObserver: boolean
+  score: number
+  cluesGiven: string[]
+  votesReceived: number
+  badges: string[]
+  hasVoted: boolean
 }
 
-interface GameState {
-  players: Player[]
-  currentPlayerIndex: number
-  phase: GamePhase
-  round: number
-  selectedWordPack: string
-  wordPair: { civilian: string; undercover: string } | null
-  votes: { [playerId: number]: number }
-  eliminatedPlayer: Player | null
-  winner: 'civilians' | 'undercover' | null
-  gameStats: {
-    totalRounds: number
-    totalReminders: number
-    eliminationOrder: Player[]
-  }
+interface GameStats {
+  totalClues: number
+  correctGuesses: number
+  mrXWins: number
+  civilianWins: number
+  undercoverWins: number
+  roundsPlayed: number
+  mvpPlayer?: string
 }
 
 export function LocalMultiplayer() {
-  const { user, isConfigured } = useAuth()
-  const [gameState, setGameState] = useState<GameState>({
-    players: [],
-    currentPlayerIndex: 0,
-    phase: 'setup',
-    round: 1,
-    selectedWordPack: 'general',
-    wordPair: null,
-    votes: {},
-    eliminatedPlayer: null,
-    winner: null,
-    gameStats: {
-      totalRounds: 0,
-      totalReminders: 0,
-      eliminationOrder: []
-    }
+  // Game State
+  const [gamePhase, setGamePhase] = useState<GamePhase>('host-config')
+  const [config, setConfig] = useState<GameConfig>({
+    playerCount: 6,
+    undercoverCount: 1,
+    mrXCount: 1,
+    wordPackId: 'general',
+    rounds: 3,
+    spectatorVoting: false,
+    minigamesEnabled: true,
+    observerMode: true,
+    discussionTimer: true,
+    discussionTimeMinutes: 2,
+    animatedScoreboard: true
   })
-
-  const [playerCount, setPlayerCount] = useState(6)
-  const [showWord, setShowWord] = useState(false)
-  const [clueInput, setClueInput] = useState("")
-  const [selectedVote, setSelectedVote] = useState<number | null>(null)
-  const [useSupabase, setUseSupabase] = useState(false)
-  const [roomCode, setRoomCode] = useState<string>("")
+  
+  const [players, setPlayers] = useState<Player[]>([])
+  const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
+  const [currentRound, setCurrentRound] = useState(1)
+  const [speakingOrder, setSpeakingOrder] = useState<string[]>([])
+  const [votes, setVotes] = useState<{[playerId: string]: string}>({})
+  const [eliminatedThisRound, setEliminatedThisRound] = useState<Player | null>(null)
+  const [gameStats, setGameStats] = useState<GameStats>({
+    totalClues: 0,
+    correctGuesses: 0,
+    mrXWins: 0,
+    civilianWins: 0,
+    undercoverWins: 0,
+    roundsPlayed: 0
+  })
+  
+  // UI State
+  const [wordPacks, setWordPacks] = useState<WordPack[]>([])
   const [loading, setLoading] = useState(false)
+  const [showWord, setShowWord] = useState(false)
+  const [currentInput, setCurrentInput] = useState("")
+  const [discussionTimeLeft, setDiscussionTimeLeft] = useState(0)
+  const [selectedVote, setSelectedVote] = useState<string>("")
+  const [showPrivacyScreen, setShowPrivacyScreen] = useState(false)
+  const [currentRevealPlayer, setCurrentRevealPlayer] = useState<Player | null>(null)
 
-  // Initialize game
-  const startLocalGame = () => {
-    const selectedPack = wordPacks.find(pack => pack.id === gameState.selectedWordPack)!
-    const randomPair = selectedPack.pairs[Math.floor(Math.random() * selectedPack.pairs.length)]
-    
-    // Create players
-    const players: Player[] = Array.from({ length: playerCount }, (_, i) => ({
-      id: i + 1,
-      name: `Player ${i + 1}`,
-      role: 'civilian',
-      word: randomPair.civilian,
-      clue: '',
-      isAlive: true,
-      reminderCount: 0
-    }))
+  // Load word packs on mount
+  useEffect(() => {
+    const loadWordPacks = async () => {
+      try {
+        const packs = await getWordPacks()
+        setWordPacks(packs)
+      } catch (error) {
+        console.error('Failed to load word packs:', error)
+      }
+    }
+    loadWordPacks()
+  }, [])
 
-    // Assign undercover role to one random player
-    const undercoverIndex = Math.floor(Math.random() * playerCount)
-    players[undercoverIndex].role = 'undercover'
-    players[undercoverIndex].word = randomPair.undercover
+  // Discussion timer
+  useEffect(() => {
+    if (discussionTimeLeft > 0 && gamePhase === 'discussion-phase') {
+      const timer = setTimeout(() => {
+        setDiscussionTimeLeft(discussionTimeLeft - 1)
+      }, 1000)
+      return () => clearTimeout(timer)
+    } else if (discussionTimeLeft === 0 && gamePhase === 'discussion-phase') {
+      // Auto-proceed to voting when timer ends
+      setGamePhase('voting-phase')
+      setCurrentPlayerIndex(0)
+    }
+  }, [discussionTimeLeft, gamePhase])
 
-    setGameState(prev => ({
-      ...prev,
-      players,
-      wordPair: randomPair,
-      phase: 'privacy-check',
-      currentPlayerIndex: 0
-    }))
-  }
-
-  // Initialize Supabase game
-  const startSupabaseGame = async () => {
-    if (!user || !isConfigured) return
-    
+  // PHASE 1: HOST CONFIGURATION
+  const startPlayerOnboarding = async () => {
     setLoading(true)
     try {
-      const room = await createRoom(user.id, {
-        maxPlayers: playerCount,
-        wordPack: gameState.selectedWordPack
-      })
-      
-      setRoomCode(room.room_code)
-      
-      // Join as host
-      await joinRoom(room.room_code, user.id, user.user_metadata?.username || user.email)
-      
-      setGameState(prev => ({
-        ...prev,
-        phase: 'privacy-check'
-      }))
+      // Save config to Supabase
+      const gameConfig: LocalGameConfig = {
+        id: crypto.randomUUID(),
+        ...config,
+        createdAt: new Date().toISOString()
+      }
+      await saveGameConfig(gameConfig)
+      setGamePhase('player-onboarding')
     } catch (error) {
-      console.error('Error creating room:', error)
+      console.error('Failed to save config:', error)
     } finally {
       setLoading(false)
     }
   }
 
-  // Privacy check confirmation
-  const confirmPrivacy = () => {
-    setGameState(prev => ({ ...prev, phase: 'word-reveal' }))
-  }
+  // PHASE 2: PLAYER ONBOARDING
+  const addPlayer = () => {
+    if (players.length >= config.playerCount || !currentInput.trim()) return
 
-  // Show word and proceed
-  const proceedFromWordReveal = () => {
-    setShowWord(false)
-    setGameState(prev => ({ ...prev, phase: 'clue-giving' }))
-  }
-
-  // Submit clue
-  const submitClue = () => {
-    if (!clueInput.trim()) return
-
-    const updatedPlayers = [...gameState.players]
-    updatedPlayers[gameState.currentPlayerIndex].clue = clueInput.trim()
-
-    const nextPlayerIndex = gameState.currentPlayerIndex + 1
-    const isLastPlayer = nextPlayerIndex >= gameState.players.filter(p => p.isAlive).length
-
-    setGameState(prev => ({
-      ...prev,
-      players: updatedPlayers,
-      currentPlayerIndex: isLastPlayer ? 0 : nextPlayerIndex,
-      phase: isLastPlayer ? 'voting' : 'privacy-check'
-    }))
-
-    setClueInput("")
-  }
-
-  // Submit vote
-  const submitVote = () => {
-    if (selectedVote === null) return
-
-    const newVotes = { ...gameState.votes }
-    newVotes[gameState.currentPlayerIndex + 1] = selectedVote
-
-    const nextPlayerIndex = gameState.currentPlayerIndex + 1
-    const alivePlayers = gameState.players.filter(p => p.isAlive)
-    const isLastVoter = nextPlayerIndex >= alivePlayers.length
-
-    if (isLastVoter) {
-      // Calculate elimination
-      const voteCounts: { [playerId: number]: number } = {}
-      Object.values(newVotes).forEach(vote => {
-        voteCounts[vote] = (voteCounts[vote] || 0) + 1
-      })
-
-      const maxVotes = Math.max(...Object.values(voteCounts))
-      const eliminatedId = parseInt(Object.keys(voteCounts).find(id => voteCounts[parseInt(id)] === maxVotes)!)
-      const eliminatedPlayer = gameState.players.find(p => p.id === eliminatedId)!
-
-      const updatedPlayers = gameState.players.map(p => 
-        p.id === eliminatedId ? { ...p, isAlive: false } : p
-      )
-
-      // Check win conditions
-      const aliveAfterElimination = updatedPlayers.filter(p => p.isAlive)
-      const aliveCivilians = aliveAfterElimination.filter(p => p.role === 'civilian')
-      const aliveUndercover = aliveAfterElimination.filter(p => p.role === 'undercover')
-
-      let winner: 'civilians' | 'undercover' | null = null
-      if (aliveUndercover.length === 0) {
-        winner = 'civilians'
-      } else if (aliveCivilians.length <= aliveUndercover.length) {
-        winner = 'undercover'
-      }
-
-      setGameState(prev => ({
-        ...prev,
-        players: updatedPlayers,
-        votes: newVotes,
-        eliminatedPlayer,
-        winner,
-        phase: winner ? 'final-results' : 'results',
-        gameStats: {
-          ...prev.gameStats,
-          totalRounds: prev.round,
-          eliminationOrder: [...prev.gameStats.eliminationOrder, eliminatedPlayer]
-        }
-      }))
-    } else {
-      setGameState(prev => ({
-        ...prev,
-        votes: newVotes,
-        currentPlayerIndex: nextPlayerIndex
-      }))
+    const newPlayer: Player = {
+      id: crypto.randomUUID(),
+      name: currentInput.trim(),
+      avatar: getRandomAvatar(),
+      role: 'civilian',
+      isEliminated: false,
+      isObserver: false,
+      score: 0,
+      cluesGiven: [],
+      votesReceived: 0,
+      badges: [],
+      hasVoted: false
     }
 
-    setSelectedVote(null)
+    setPlayers([...players, newPlayer])
+    setCurrentInput("")
   }
 
-  // Use word reminder
-  const useReminder = () => {
-    const updatedPlayers = [...gameState.players]
-    updatedPlayers[gameState.currentPlayerIndex].reminderCount++
+  const startRoleAssignment = async () => {
+    setLoading(true)
+    try {
+      // Assign roles and words
+      const playersWithRoles = await assignRolesAndWords(players, config)
+      setPlayers(playersWithRoles)
+      
+      // Generate speaking order (Mr. X never first)
+      const order = generateSpeakingOrder(playersWithRoles)
+      setSpeakingOrder(order)
+      
+      setGamePhase('role-assignment')
+      setCurrentPlayerIndex(0)
+      setCurrentRevealPlayer(playersWithRoles[0])
+      setShowPrivacyScreen(true)
+    } catch (error) {
+      console.error('Failed to assign roles:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-    setGameState(prev => ({
-      ...prev,
-      players: updatedPlayers,
-      gameStats: {
-        ...prev.gameStats,
-        totalReminders: prev.gameStats.totalReminders + 1
+  // PHASE 3: ROLE & WORD ASSIGNMENT (Private Reveal)
+  const proceedToNextReveal = () => {
+    if (currentPlayerIndex < players.length - 1) {
+      const nextIndex = currentPlayerIndex + 1
+      setCurrentPlayerIndex(nextIndex)
+      setCurrentRevealPlayer(players[nextIndex])
+      setShowPrivacyScreen(true)
+      setShowWord(false)
+    } else {
+      // All players revealed, start clue phase
+      setGamePhase('clue-phase')
+      setCurrentPlayerIndex(0)
+      setShowPrivacyScreen(false)
+      setCurrentRevealPlayer(null)
+    }
+  }
+
+  // PHASE 4A: CLUE PHASE
+  const submitClue = () => {
+    if (!currentInput.trim()) return
+
+    const speakingPlayerId = speakingOrder[currentPlayerIndex]
+    const updatedPlayers = players.map(p => 
+      p.id === speakingPlayerId 
+        ? { ...p, cluesGiven: [...p.cluesGiven, currentInput.trim()] }
+        : p
+    )
+    
+    setPlayers(updatedPlayers)
+    setGameStats(prev => ({ ...prev, totalClues: prev.totalClues + 1 }))
+    setCurrentInput("")
+
+    // Move to next player or next phase
+    if (currentPlayerIndex < speakingOrder.length - 1) {
+      setCurrentPlayerIndex(currentPlayerIndex + 1)
+    } else {
+      // All players gave clues
+      if (config.discussionTimer) {
+        setGamePhase('discussion-phase')
+        setDiscussionTimeLeft(config.discussionTimeMinutes * 60)
+      } else {
+        setGamePhase('voting-phase')
+        setCurrentPlayerIndex(0)
       }
-    }))
-
-    setShowWord(true)
+    }
   }
 
-  // Reset game
+  // PHASE 4C: VOTING PHASE
+  const submitVote = () => {
+    if (!selectedVote) return
+
+    const alivePlayers = players.filter(p => !p.isEliminated)
+    const votingPlayer = alivePlayers[currentPlayerIndex]
+    
+    const newVotes = { ...votes, [votingPlayer.id]: selectedVote }
+    setVotes(newVotes)
+    setSelectedVote("")
+
+    // Update player as having voted
+    const updatedPlayers = players.map(p => 
+      p.id === votingPlayer.id ? { ...p, hasVoted: true } : p
+    )
+    setPlayers(updatedPlayers)
+
+    // Check if all alive players have voted
+    if (Object.keys(newVotes).length >= alivePlayers.length) {
+      // Process elimination
+      const eliminatedPlayer = calculateElimination(newVotes, players)
+      if (eliminatedPlayer) {
+        setEliminatedThisRound(eliminatedPlayer)
+        
+        // Mark player as eliminated
+        const finalPlayers = players.map(p => 
+          p.id === eliminatedPlayer.id ? { ...p, isEliminated: true } : p
+        )
+        setPlayers(finalPlayers)
+        
+        setGamePhase('elimination-reveal')
+      }
+    } else {
+      // Move to next voter
+      setCurrentPlayerIndex(currentPlayerIndex + 1)
+    }
+  }
+
+  // PHASE 4D: ELIMINATION & REVEAL
+  const handleMrXWordGuess = (guess: string) => {
+    const civilianWord = players.find(p => p.role === 'civilian')?.word?.toLowerCase()
+    const isCorrect = guess.toLowerCase() === civilianWord
+    
+    if (isCorrect) {
+      // Mr. X wins immediately
+      setGameStats(prev => ({ ...prev, mrXWins: prev.mrXWins + 1 }))
+      setGamePhase('game-end')
+    } else {
+      // Continue to round end or game end
+      proceedAfterElimination()
+    }
+    setCurrentInput("")
+  }
+
+  const proceedAfterElimination = () => {
+    // Check win conditions
+    const winner = checkWinCondition(players)
+    
+    if (winner) {
+      setGameStats(prev => ({
+        ...prev,
+        civilianWins: winner === 'civilians' ? prev.civilianWins + 1 : prev.civilianWins,
+        undercoverWins: winner === 'undercover' ? prev.undercoverWins + 1 : prev.undercoverWins,
+        roundsPlayed: currentRound
+      }))
+      setGamePhase('game-end')
+    } else if (currentRound >= config.rounds) {
+      setGamePhase('game-end')
+    } else {
+      setGamePhase('round-end')
+    }
+  }
+
+  // PHASE 6: ROUND END & NEW ROUND
+  const startNextRound = () => {
+    // Reset round state
+    setCurrentRound(currentRound + 1)
+    setVotes({})
+    setEliminatedThisRound(null)
+    
+    // Reset player voting status
+    const resetPlayers = players.map(p => ({ ...p, hasVoted: false }))
+    setPlayers(resetPlayers)
+    
+    // Generate new speaking order
+    const alivePlayers = resetPlayers.filter(p => !p.isEliminated)
+    const newOrder = generateSpeakingOrder(alivePlayers)
+    setSpeakingOrder(newOrder)
+    
+    setGamePhase('clue-phase')
+    setCurrentPlayerIndex(0)
+  }
+
+  // PHASE 7: GAME END
   const resetGame = () => {
-    setGameState({
-      players: [],
-      currentPlayerIndex: 0,
-      phase: 'setup',
-      round: 1,
-      selectedWordPack: 'general',
-      wordPair: null,
-      votes: {},
-      eliminatedPlayer: null,
-      winner: null,
-      gameStats: {
-        totalRounds: 0,
-        totalReminders: 0,
-        eliminationOrder: []
-      }
+    setGamePhase('host-config')
+    setPlayers([])
+    setCurrentPlayerIndex(0)
+    setCurrentRound(1)
+    setSpeakingOrder([])
+    setVotes({})
+    setEliminatedThisRound(null)
+    setGameStats({
+      totalClues: 0,
+      correctGuesses: 0,
+      mrXWins: 0,
+      civilianWins: 0,
+      undercoverWins: 0,
+      roundsPlayed: 0
     })
+    setCurrentInput("")
+    setSelectedVote("")
     setShowWord(false)
-    setClueInput("")
-    setSelectedVote(null)
+    setShowPrivacyScreen(false)
+    setCurrentRevealPlayer(null)
   }
 
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex]
-  const alivePlayers = gameState.players.filter(p => p.isAlive)
+  // Helper functions
+  const getCurrentSpeakingPlayer = () => {
+    if (gamePhase !== 'clue-phase' || speakingOrder.length === 0) return null
+    const playerId = speakingOrder[currentPlayerIndex]
+    return players.find(p => p.id === playerId)
+  }
+
+  const getAlivePlayers = () => players.filter(p => !p.isEliminated)
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-black dark:to-purple-900">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 relative overflow-hidden">
+      <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(147, 51, 234, 0.3)" />
+      <BackgroundBeams />
+      
+      <div className="max-w-4xl mx-auto px-4 py-8 relative z-10">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <Button variant="ghost" className="flex items-center gap-2">
+        <div className="flex items-center justify-between mb-6">
+          <Button variant="ghost" className="text-white hover:bg-white/10">
             <Link to="/" className="flex items-center gap-2">
               <ArrowLeft className="w-4 h-4" />
-              Back to Home
+              Home
             </Link>
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Local Multiplayer
-          </h1>
-          <div className="w-20" /> {/* Spacer */}
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-white">
+              {gamePhase === 'host-config' ? 'Game Setup' :
+               gamePhase === 'player-onboarding' ? 'Add Players' :
+               gamePhase === 'role-assignment' ? 'Role Assignment' :
+               `Round ${currentRound}`}
+            </h1>
+            <p className="text-sm text-slate-300 capitalize">
+              {gamePhase.replace('-', ' ')}
+            </p>
+          </div>
+          <div className="text-right">
+            {gamePhase !== 'host-config' && gamePhase !== 'player-onboarding' && (
+              <>
+                <div className="text-sm text-slate-300">Players</div>
+                <div className="text-lg font-bold text-white">
+                  {getAlivePlayers().length}/{players.length}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <AnimatePresence mode="wait">
-          {/* Setup Phase */}
-          {gameState.phase === 'setup' && (
+          {/* PHASE 1: HOST CONFIGURATION */}
+          {gamePhase === 'host-config' && (
             <motion.div
-              key="setup"
+              key="host-config"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
             >
-              <Card>
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={20} />
                 <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Game Setup</CardTitle>
-                  <CardDescription>
-                    Configure your local multiplayer game
+                  <motion.div
+                    animate={{ rotate: [0, 360] }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="w-16 h-16 bg-gradient-to-r from-purple-500 to-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4"
+                  >
+                    <Settings className="w-8 h-8 text-white" />
+                  </motion.div>
+                  <CardTitle className="text-2xl text-white">Host Configuration</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Configure your perfect party game session
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Player Count */}
-                  <div>
-                    <label className="block text-sm font-medium mb-3">
-                      Number of Players: {playerCount}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-white">
+                      Number of Players: {config.playerCount}
                     </label>
                     <input
                       type="range"
                       min="3"
                       max="20"
-                      value={playerCount}
-                      onChange={(e) => setPlayerCount(parseInt(e.target.value))}
-                      className="w-full"
+                      value={config.playerCount}
+                      onChange={(e) => setConfig({ ...config, playerCount: parseInt(e.target.value) })}
+                      className="w-full accent-purple-500"
                     />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>3</span>
-                      <span>20</span>
+                    <div className="flex justify-between text-xs text-slate-300">
+                      <span>3 players</span>
+                      <span>20 players</span>
+                    </div>
+                  </div>
+
+                  {/* Role Configuration */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-white">
+                        Undercover Players: {config.undercoverCount}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max={Math.max(1, Math.floor(config.playerCount / 3))}
+                        value={config.undercoverCount}
+                        onChange={(e) => setConfig({ ...config, undercoverCount: parseInt(e.target.value) })}
+                        className="w-full accent-red-500"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-sm font-medium text-white">
+                        Mr. X Players: {config.mrXCount}
+                      </label>
+                      <input
+                        type="range"
+                        min="1"
+                        max={Math.max(1, Math.floor(config.playerCount / 4))}
+                        value={config.mrXCount}
+                        onChange={(e) => setConfig({ ...config, mrXCount: parseInt(e.target.value) })}
+                        className="w-full accent-yellow-500"
+                      />
                     </div>
                   </div>
 
                   {/* Word Pack Selection */}
-                  <div>
-                    <label className="block text-sm font-medium mb-3">
-                      Choose Word Pack
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-white">
+                      Choose Word Pack from Supabase
                     </label>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       {wordPacks.map((pack) => (
                         <Card
                           key={pack.id}
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                            gameState.selectedWordPack === pack.id
-                              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                              : ''
-                          }`}
-                          onClick={() => setGameState(prev => ({ ...prev, selectedWordPack: pack.id }))}
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                            config.wordPackId === pack.id
+                              ? 'ring-2 ring-purple-500 bg-purple-500/20'
+                              : 'bg-white/5 hover:bg-white/10'
+                          } border border-white/20`}
+                          onClick={() => setConfig({ ...config, wordPackId: pack.id })}
                         >
                           <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
-                              <CardTitle className="text-sm">{pack.title}</CardTitle>
-                              <Badge variant={pack.difficulty === 'Easy' ? 'default' : 'secondary'}>
+                              <CardTitle className="text-sm text-white">{pack.title}</CardTitle>
+                              <Badge 
+                                className={
+                                  pack.difficulty === 'easy' ? 'bg-green-500' :
+                                  pack.difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
+                                }
+                              >
                                 {pack.difficulty}
                               </Badge>
                             </div>
                           </CardHeader>
                           <CardContent>
-                            <CardDescription className="text-xs mb-2">
+                            <CardDescription className="text-xs text-slate-300 mb-2">
                               {pack.description}
                             </CardDescription>
-                            <div className="text-xs text-gray-500">
-                              {pack.pairs.length} word pairs
+                            <div className="text-xs text-slate-400">
+                              {pack.wordPairs.length} word pairs • {pack.type}
                             </div>
                           </CardContent>
                         </Card>
@@ -361,262 +519,226 @@ export function LocalMultiplayer() {
                     </div>
                   </div>
 
-                  {/* Game Mode Selection */}
-                  {isConfigured && user && (
-                    <div className="space-y-4">
-                      <label className="block text-sm font-medium">
-                        Game Mode
-                      </label>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Card
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                            !useSupabase
-                              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                              : ''
-                          }`}
-                          onClick={() => setUseSupabase(false)}
+                  {/* Rounds Selection */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-medium text-white">
+                      Number of Rounds
+                    </label>
+                    <div className="flex gap-2">
+                      {[3, 5, 7].map(rounds => (
+                        <Button
+                          key={rounds}
+                          variant={config.rounds === rounds ? "default" : "outline"}
+                          onClick={() => setConfig({ ...config, rounds })}
+                          className={config.rounds === rounds ? 
+                            "bg-purple-500 hover:bg-purple-600" : 
+                            "border-white/30 text-white hover:bg-white/10"
+                          }
                         >
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Local Mode</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <CardDescription className="text-xs">
-                              Pass and play on one device
-                            </CardDescription>
-                          </CardContent>
-                        </Card>
-                        
-                        <Card
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-md ${
-                            useSupabase
-                              ? 'ring-2 ring-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                              : ''
-                          }`}
-                          onClick={() => setUseSupabase(true)}
-                        >
-                          <CardHeader className="pb-2">
-                            <CardTitle className="text-sm">Online Mode</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <CardDescription className="text-xs">
-                              Create room for remote players
-                            </CardDescription>
-                          </CardContent>
-                        </Card>
-                      </div>
+                          {rounds} Rounds
+                        </Button>
+                      ))}
                     </div>
-                  )}
+                  </div>
+
+                  {/* Optional Features */}
+                  <div className="space-y-4">
+                    <h4 className="text-lg font-semibold text-white flex items-center gap-2">
+                      <Sparkles className="w-5 h-5 text-yellow-400" />
+                      Optional Features
+                    </h4>
+                    <div className="grid grid-cols-1 gap-4">
+                      {[
+                        { key: 'spectatorVoting', label: 'Spectator Voting', icon: Vote, desc: 'Eliminated players can still vote' },
+                        { key: 'minigamesEnabled', label: 'Minigames for Eliminated Civilians', icon: Gamepad2, desc: 'Fun activities for eliminated players' },
+                        { key: 'observerMode', label: 'Observer Mode', icon: Eye, desc: 'Eliminated players can watch with limited info' },
+                        { key: 'discussionTimer', label: 'Discussion Timer', icon: Timer, desc: 'Timed discussion phase' },
+                        { key: 'animatedScoreboard', label: 'Animated Scoreboard', icon: Trophy, desc: 'Enhanced score displays' }
+                      ].map(({ key, label, icon: Icon, desc }) => (
+                        <div key={key} className="flex items-center justify-between p-4 bg-white/5 rounded-lg border border-white/10">
+                          <div className="flex items-start gap-3">
+                            <Icon className="w-5 h-5 text-slate-300 mt-0.5" />
+                            <div>
+                              <div className="text-sm font-medium text-white">{label}</div>
+                              <div className="text-xs text-slate-400">{desc}</div>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setConfig({ ...config, [key]: !config[key as keyof GameConfig] })}
+                            className={`w-12 h-6 rounded-full transition-colors ${
+                              config[key as keyof GameConfig] ? 'bg-purple-500' : 'bg-gray-600'
+                            }`}
+                          >
+                            <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                              config[key as keyof GameConfig] ? 'translate-x-6' : 'translate-x-0.5'
+                            }`} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Discussion Timer Duration */}
+                    {config.discussionTimer && (
+                      <div className="space-y-2 ml-8">
+                        <label className="block text-sm font-medium text-white">
+                          Discussion Time: {config.discussionTimeMinutes} minutes
+                        </label>
+                        <input
+                          type="range"
+                          min="1"
+                          max="5"
+                          value={config.discussionTimeMinutes}
+                          onChange={(e) => setConfig({ ...config, discussionTimeMinutes: parseInt(e.target.value) })}
+                          className="w-full accent-orange-500"
+                        />
+                        <div className="flex justify-between text-xs text-slate-300">
+                          <span>1 min</span>
+                          <span>5 min</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Monetization Preview */}
+                  <div className="p-4 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 rounded-lg border border-yellow-500/30">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Crown className="w-5 h-5 text-yellow-400" />
+                      <span className="text-sm font-semibold text-yellow-200">Cosmetic/Unlock Shop</span>
+                      <Badge className="bg-orange-500 text-white">Coming Soon</Badge>
+                    </div>
+                    <p className="text-xs text-yellow-100">
+                      Premium word packs, custom avatars, exclusive badges, and cosmetic unlocks will be available soon!
+                    </p>
+                  </div>
 
                   <Button 
-                    onClick={useSupabase && isConfigured ? startSupabaseGame : startLocalGame} 
-                    className="w-full" 
-                    size="lg"
+                    onClick={startPlayerOnboarding} 
+                    className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white py-3 text-lg font-semibold"
                     disabled={loading}
                   >
-                    <Play className="w-4 h-4 mr-2" />
-                    {loading ? 'Creating...' : useSupabase ? 'Create Online Room' : 'Start Local Game'}
-                  </Button>
-                  
-                  {useSupabase && roomCode && (
-                    <div className="text-center p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                      <p className="text-sm text-green-800 dark:text-green-200 mb-2">
-                        Room Created! Share this code:
-                      </p>
-                      <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-                        {roomCode}
+                    {loading ? (
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Saving Configuration...
                       </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Privacy Check Phase */}
-          {gameState.phase === 'privacy-check' && (
-            <motion.div
-              key="privacy-check"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center"
-            >
-              <Card className="max-w-md mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-xl">Privacy Check</CardTitle>
-                  <CardDescription>
-                    Make sure only the correct player can see the screen
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="text-6xl">🔒</div>
-                  <div>
-                    <h3 className="text-lg font-semibold mb-2">
-                      Are you {currentPlayer?.name}?
-                    </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Only {currentPlayer?.name} should see their secret word. 
-                      Make sure others are looking away!
-                    </p>
-                  </div>
-                  <Button onClick={confirmPrivacy} className="w-full">
-                    Yes, I'm {currentPlayer?.name}
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <ChevronRight className="w-5 h-5" />
+                        Save & Proceed to Player Setup
+                      </div>
+                    )}
                   </Button>
                 </CardContent>
               </Card>
             </motion.div>
           )}
 
-          {/* Word Reveal Phase */}
-          {gameState.phase === 'word-reveal' && (
+          {/* PHASE 2: PLAYER ONBOARDING */}
+          {gamePhase === 'player-onboarding' && (
             <motion.div
-              key="word-reveal"
+              key="player-onboarding"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="text-center"
             >
-              <Card className="max-w-md mx-auto">
-                <CardHeader>
-                  <CardTitle className="text-xl">{currentPlayer?.name}</CardTitle>
-                  <CardDescription>
-                    Your secret word and role
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className={`p-6 rounded-lg ${
-                    currentPlayer?.role === 'civilian' 
-                      ? 'bg-blue-100 dark:bg-blue-900/20' 
-                      : 'bg-red-100 dark:bg-red-900/20'
-                  }`}>
-                    <div className="flex items-center justify-center gap-2 mb-4">
-                      {currentPlayer?.role === 'civilian' ? (
-                        <Shield className="w-6 h-6 text-blue-600" />
-                      ) : (
-                        <Target className="w-6 h-6 text-red-600" />
-                      )}
-                      <Badge className={
-                        currentPlayer?.role === 'civilian' 
-                          ? 'bg-blue-600' 
-                          : 'bg-red-600'
-                      }>
-                        {currentPlayer?.role === 'civilian' ? 'Civilian' : 'Undercover'}
-                      </Badge>
-                    </div>
-                    <div className="text-3xl font-bold mb-2">
-                      {showWord ? currentPlayer?.word : '***'}
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setShowWord(!showWord)}
-                      className="mb-4"
-                    >
-                      {showWord ? <EyeOff className="w-4 h-4 mr-1" /> : <Eye className="w-4 h-4 mr-1" />}
-                      {showWord ? 'Hide' : 'Show'} Word
-                    </Button>
-                  </div>
-                  
-                  <div className="text-sm text-gray-600 dark:text-gray-400">
-                    {currentPlayer?.role === 'civilian' 
-                      ? 'You are a Civilian. Give clues that help other civilians identify the undercover player.'
-                      : 'You are Undercover! Try to blend in without revealing that you have a different word.'
-                    }
-                  </div>
-
-                  <Button onClick={proceedFromWordReveal} className="w-full">
-                    I've Memorized My Word
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Clue Giving Phase */}
-          {gameState.phase === 'clue-giving' && (
-            <motion.div
-              key="clue-giving"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
-            >
-              <Card>
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={15} />
                 <CardHeader className="text-center">
-                  <CardTitle className="text-xl">
-                    {currentPlayer?.name}'s Turn
-                  </CardTitle>
-                  <CardDescription>
-                    Give a one-word clue about your secret word
+                  <UserPlus className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                  <CardTitle className="text-2xl text-white">Player Onboarding</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Add players sequentially ({players.length}/{config.playerCount})
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Progress */}
-                  <div className="flex items-center justify-between text-sm">
-                    <span>Round {gameState.round}</span>
-                    <span>
-                      {gameState.players.filter(p => p.clue).length} / {alivePlayers.length} clues given
-                    </span>
-                  </div>
-                  <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  {/* Progress Bar */}
+                  <div className="w-full bg-gray-700 rounded-full h-2">
                     <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                      style={{ 
-                        width: `${(gameState.players.filter(p => p.clue).length / alivePlayers.length) * 100}%` 
-                      }}
+                      className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${(players.length / config.playerCount) * 100}%` }}
                     />
                   </div>
 
-                  {/* Word Reminder */}
-                  <div className="flex items-center justify-center gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={useReminder}
-                      className="flex items-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" />
-                      Show My Word
-                      {currentPlayer?.reminderCount > 0 && (
-                        <Badge variant="secondary" className="ml-1">
-                          {currentPlayer.reminderCount}
-                        </Badge>
-                      )}
-                    </Button>
-                  </div>
-
-                  {/* Clue Input */}
-                  <div className="space-y-4">
-                    <input
-                      type="text"
-                      value={clueInput}
-                      onChange={(e) => setClueInput(e.target.value)}
-                      placeholder="Enter your one-word clue..."
-                      className="w-full px-4 py-3 text-center text-xl border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
-                      maxLength={20}
-                    />
-                    <Button 
-                      onClick={submitClue} 
-                      className="w-full" 
-                      disabled={!clueInput.trim()}
-                    >
-                      Submit Clue
-                    </Button>
-                  </div>
-
-                  {/* Previous Clues */}
-                  {gameState.players.some(p => p.clue) && (
-                    <div className="border-t pt-4">
-                      <h4 className="font-semibold mb-3">Clues Given:</h4>
-                      <div className="grid grid-cols-2 gap-2">
-                        {gameState.players
-                          .filter(p => p.clue && p.isAlive)
-                          .map(player => (
-                            <div key={player.id} className="flex justify-between text-sm">
-                              <span>{player.name}:</span>
-                              <span className="font-medium">{player.clue}</span>
+                  {/* Current Players */}
+                  {players.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-white flex items-center gap-2">
+                        <CheckCircle className="w-5 h-5 text-green-400" />
+                        Players Added:
+                      </h4>
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                        {players.map((player, index) => (
+                          <div key={player.id} className="flex items-center gap-3 p-3 bg-white/5 rounded-lg border border-white/10">
+                            <span className="text-2xl">{player.avatar}</span>
+                            <div>
+                              <div className="text-sm font-medium text-white">{player.name}</div>
+                              <div className="text-xs text-slate-400">Player {index + 1}</div>
                             </div>
-                          ))}
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                  )}
+
+                  {/* Add Next Player */}
+                  {players.length < config.playerCount && (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <label className="text-lg font-medium text-white flex items-center gap-2">
+                          <UserPlus className="w-5 h-5" />
+                          Enter Player {players.length + 1} Name
+                        </label>
+                        <input
+                          type="text"
+                          value={currentInput}
+                          onChange={(e) => setCurrentInput(e.target.value)}
+                          placeholder={`Player ${players.length + 1}`}
+                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-green-500"
+                          onKeyPress={(e) => e.key === 'Enter' && addPlayer()}
+                          autoFocus
+                        />
+                      </div>
+                      <Button 
+                        onClick={addPlayer} 
+                        className="w-full bg-green-500 hover:bg-green-600"
+                        disabled={!currentInput.trim()}
+                      >
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Add Player {players.length + 1}
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Host Review & Start Game */}
+                  {players.length === config.playerCount && (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-green-500/20 rounded-lg border border-green-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <CheckCircle className="w-5 h-5 text-green-400" />
+                          <span className="text-sm font-semibold text-green-200">All Players Added!</span>
+                        </div>
+                        <p className="text-xs text-green-100">
+                          Host, please review the full player list before starting the game.
+                        </p>
+                      </div>
+                      
+                      <Button 
+                        onClick={startRoleAssignment} 
+                        className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 text-lg font-semibold"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            Assigning Roles & Words...
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <Play className="w-5 h-5" />
+                            Host Taps "Start Game"
+                          </div>
+                        )}
+                      </Button>
                     </div>
                   )}
                 </CardContent>
@@ -624,277 +746,51 @@ export function LocalMultiplayer() {
             </motion.div>
           )}
 
-          {/* Voting Phase */}
-          {gameState.phase === 'voting' && (
+          {/* PHASE 3: ROLE & WORD ASSIGNMENT (Private Reveal) */}
+          {gamePhase === 'role-assignment' && (
             <motion.div
-              key="voting"
+              key="role-assignment"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
+              className="text-center"
             >
-              <Card>
-                <CardHeader className="text-center">
-                  <CardTitle className="text-xl">Voting Time</CardTitle>
-                  <CardDescription>
-                    {currentPlayer?.name}, vote to eliminate someone
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* All Clues */}
-                  <div>
-                    <h4 className="font-semibold mb-3">All Clues:</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {alivePlayers.map(player => (
-                        <div 
-                          key={player.id} 
-                          className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
-                        >
-                          <span className="font-medium">{player.name}:</span>
-                          <span className="text-lg">{player.clue}</span>
-                        </div>
-                      ))}
+              {showPrivacyScreen && currentRevealPlayer && (
+                <Card className="max-w-md mx-auto bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                  <Meteors number={10} />
+                  <CardHeader>
+                    <div className="text-6xl mb-4">🔒</div>
+                    <CardTitle className="text-xl text-white">Private Reveal</CardTitle>
+                    <CardDescription className="text-slate-300">
+                      Hand device to {currentRevealPlayer.name}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+                      <p className="text-white font-medium mb-2">
+                        Are you {currentRevealPlayer.name}?
+                      </p>
+                      <p className="text-sm text-slate-300">
+                        Only {currentRevealPlayer.name} should see their role and word. 
+                        Make sure others are looking away!
+                      </p>
                     </div>
-                  </div>
-
-                  {/* Vote Selection */}
-                  <div>
-                    <h4 className="font-semibold mb-3">Vote to Eliminate:</h4>
-                    <div className="grid grid-cols-2 gap-3">
-                      {alivePlayers
-                        .filter(p => p.id !== currentPlayer?.id)
-                        .map(player => (
-                          <Button
-                            key={player.id}
-                            variant={selectedVote === player.id ? "default" : "outline"}
-                            onClick={() => setSelectedVote(player.id)}
-                            className="p-4 h-auto"
-                          >
-                            <div className="text-center">
-                              <div className="font-medium">{player.name}</div>
-                              <div className="text-sm opacity-75">"{player.clue}"</div>
-                            </div>
-                          </Button>
-                        ))}
-                    </div>
-                  </div>
-
-                  <Button 
-                    onClick={submitVote} 
-                    className="w-full" 
-                    disabled={selectedVote === null}
-                  >
-                    Cast Vote
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Results Phase */}
-          {gameState.phase === 'results' && (
-            <motion.div
-              key="results"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center space-y-6"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-2xl">Round Results</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="text-6xl">
-                    {gameState.eliminatedPlayer?.role === 'undercover' ? '🎉' : '😔'}
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">
-                      {gameState.eliminatedPlayer?.name} was eliminated!
-                    </h3>
-                    <Badge className={
-                      gameState.eliminatedPlayer?.role === 'civilian' 
-                        ? 'bg-blue-600' 
-                        : 'bg-red-600'
-                    }>
-                      {gameState.eliminatedPlayer?.role === 'civilian' ? 'Civilian' : 'Undercover'}
-                    </Badge>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-                      Their word was: <strong>{gameState.eliminatedPlayer?.word}</strong>
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <div className="font-semibold">Civilians Remaining</div>
-                      <div className="text-2xl text-blue-600">
-                        {alivePlayers.filter(p => p.role === 'civilian').length}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-semibold">Undercover Remaining</div>
-                      <div className="text-2xl text-red-600">
-                        {alivePlayers.filter(p => p.role === 'undercover').length}
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button 
-                    onClick={() => setGameState(prev => ({ 
-                      ...prev, 
-                      phase: 'privacy-check',
-                      currentPlayerIndex: 0,
-                      round: prev.round + 1,
-                      votes: {},
-                      eliminatedPlayer: null
-                    }))}
-                    className="w-full"
-                  >
-                    Continue Game
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-
-          {/* Final Results Phase */}
-          {gameState.phase === 'final-results' && (
-            <motion.div
-              key="final-results"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="text-center space-y-6"
-            >
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-3xl">Game Over!</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="text-8xl">
-                    {gameState.winner === 'civilians' ? '🏆' : '🎭'}
-                  </div>
-                  
-                  <div>
-                    <h2 className="text-2xl font-bold mb-4">
-                      {gameState.winner === 'civilians' ? 'Civilians Win!' : 'Undercover Wins!'}
-                    </h2>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {gameState.winner === 'civilians' 
-                        ? 'The civilians successfully identified and eliminated the undercover player!'
-                        : 'The undercover player survived and outnumbered the civilians!'
-                      }
-                    </p>
-                  </div>
-
-                  {/* Game Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                      <div className="flex items-center justify-center mb-1">
-                        <Clock className="w-4 h-4" />
-                      </div>
-                      <div className="font-semibold">Rounds</div>
-                      <div className="text-xl">{gameState.gameStats.totalRounds}</div>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                      <div className="flex items-center justify-center mb-1">
-                        <Eye className="w-4 h-4" />
-                      </div>
-                      <div className="font-semibold">Reminders</div>
-                      <div className="text-xl">{gameState.gameStats.totalReminders}</div>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                      <div className="flex items-center justify-center mb-1">
-                        <Users className="w-4 h-4" />
-                      </div>
-                      <div className="font-semibold">Players</div>
-                      <div className="text-xl">{gameState.players.length}</div>
-                    </div>
-                    <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
-                      <div className="flex items-center justify-center mb-1">
-                        <Trophy className="w-4 h-4" />
-                      </div>
-                      <div className="font-semibold">Winner</div>
-                      <div className="text-sm">
-                        {gameState.winner === 'civilians' ? 'Civilians' : 'Undercover'}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Elimination Order */}
-                  <div>
-                    <h4 className="font-semibold mb-3">Elimination Order:</h4>
-                    <div className="space-y-2">
-                      {gameState.gameStats.eliminationOrder.map((player, index) => (
-                        <div key={player.id} className="flex items-center justify-between text-sm">
-                          <span>#{index + 1} {player.name}</span>
-                          <Badge className={
-                            player.role === 'civilian' ? 'bg-blue-600' : 'bg-red-600'
-                          }>
-                            {player.role}
-                          </Badge>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex gap-4">
-                    <Button onClick={resetGame} className="flex-1">
-                      <RotateCcw className="w-4 h-4 mr-2" />
-                      Play Again
+                    
+                    <Button 
+                      onClick={() => {
+                        setShowPrivacyScreen(false)
+                        setShowWord(true)
+                      }} 
+                      className="w-full bg-blue-500 hover:bg-blue-600"
+                    >
+                      Yes, I am {currentRevealPlayer.name}
                     </Button>
-                    <Button variant="outline" className="flex-1">
-                      <Link to="/">Back to Home</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                  </CardContent>
+                </Card>
+              )}
 
-        {/* Word Reminder Modal */}
-        <AnimatePresence>
-          {showWord && gameState.phase === 'clue-giving' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
-              onClick={() => setShowWord(false)}
-            >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl max-w-sm mx-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <div className="text-center">
-                  <div className="text-4xl mb-4">👁️</div>
-                  <h3 className="text-xl font-semibold mb-2">Your Word</h3>
-                  <div className={`text-3xl font-bold p-4 rounded-lg mb-4 ${
-                    currentPlayer?.role === 'civilian' 
-                      ? 'bg-blue-100 dark:bg-blue-900/20 text-blue-800 dark:text-blue-200' 
-                      : 'bg-red-100 dark:bg-red-900/20 text-red-800 dark:text-red-200'
-                  }`}>
-                    {currentPlayer?.word}
-                  </div>
-                  <Badge className={
-                    currentPlayer?.role === 'civilian' ? 'bg-blue-600' : 'bg-red-600'
-                  }>
-                    {currentPlayer?.role === 'civilian' ? 'Civilian' : 'Undercover'}
-                  </Badge>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-4">
-                    Tap anywhere to close
-                  </p>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </div>
-  )
+              {/* Role & Word Reveal Modal */}
+              <AnimatePresence>
+                {showWord && currentRevealPlayer && (
+  return <SingleDeviceGame />
 }
