@@ -43,6 +43,12 @@ export function Navbar() {
               Features
             </a>
             <a
+              href="#game-modes"
+              className="text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors duration-200 font-medium"
+            >
+              Game Modes
+            </a>
+            <a
               href="#how-to-play"
               className="text-gray-700 dark:text-gray-300 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors duration-200 font-medium"
             >
