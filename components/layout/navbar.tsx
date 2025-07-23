@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/aceternity/button";
 import { ThemeToggle } from "@/components/aceternity/theme-toggle";
 import { useAuth } from "@/hooks/useAuth";
-import { isSupabaseConfigured } from "@/lib/supabase";
 
 
 export function Navbar() {
@@ -65,11 +64,7 @@ export function Navbar() {
           {/* Right side buttons */}
           <div className="flex items-center space-x-2 sm:space-x-4">
             <ThemeToggle />
-            {!isSupabaseConfigured ? (
-              <div className="text-xs text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-3 py-1 rounded-full">
-                Setup Required
-              </div>
-            ) : user ? (
+            {user ? (
               <>
                 <span className="text-sm text-gray-700 dark:text-gray-300 hidden sm:inline">
                   {user.username}

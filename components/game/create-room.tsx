@@ -46,47 +46,25 @@ export function CreateRoom() {
     setError('');
 
     try {
-      // Generate room code
-      const { data: roomCode, error: roomCodeError } = await supabase
-        .rpc('generate_room_code');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/game/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ maxPlayers })
+      });
 
-      if (roomCodeError) {
-        setError('Failed to generate room code');
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error || 'Failed to create room');
         return;
       }
 
-      // Create room
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .insert({
-          room_code: roomCode,
-          host_id: user.id,
-          max_players: maxPlayers
-        })
-        .select()
-        .single();
-
-      if (roomError) {
-        setError(roomError.message);
-        return;
-      }
-
-      // Add host as first player
-      const { error: playerError } = await supabase
-        .from('players')
-        .insert({
-          room_id: room.id,
-          user_id: user.id,
-          username: user.username
-        });
-
-      if (playerError) {
-        setError(playerError.message);
-        return;
-      }
-
-      if (room.room_code) {
-        router.push(`/game/${room.room_code}`);
+      if (data.room_code) {
+        router.push(`/game/${data.room_code}`);
       }
     } catch (err) {
       setError('Failed to create room. Please try again.');

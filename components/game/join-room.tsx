@@ -28,51 +28,23 @@ export function JoinRoom() {
     try {
       const upperRoomCode = roomCode.trim().toUpperCase();
       
-      // Check if room exists and has space
-      const { data: room, error: roomError } = await supabase
-        .from('rooms')
-        .select(`
-          *,
-          players:players(count)
-        `)
-        .eq('room_code', upperRoomCode)
-        .single();
-
-      if (roomError || !room) {
-        setError('Room not found');
-        return;
-      }
-
-      const playerCount = room.players?.[0]?.count || 0;
-      if (playerCount >= room.max_players) {
-        setError('Room is full');
-        return;
-      }
-
-      // Check if user is already in the room
-      const { data: existingPlayer } = await supabase
-        .from('players')
-        .select('id')
-        .eq('room_id', room.id)
-        .eq('user_id', user.id)
-        .single();
-
-      if (existingPlayer) {
-        setError('Already in this room');
-        return;
-      }
-
-      // Join the room
-      const { error: playerError } = await supabase
-        .from('players')
-        .insert({
-          room_id: room.id,
-          user_id: user.id,
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/game/join', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          roomCode: upperRoomCode,
           username: username.trim()
-        });
+        })
+      });
 
-      if (playerError) {
-        setError(playerError.message);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        setError(data.error || 'Failed to join room');
         return;
       }
 
