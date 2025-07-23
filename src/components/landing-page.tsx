@@ -1,11 +1,11 @@
 import React from "react"
-import { Navbar } from "./layout/navbar"
-import { HeroSection } from "./sections/hero-section"
-import { FeaturesSection } from "./sections/features-section"
-import { GameModesSection } from "./sections/game-modes-section"
-import { HowToPlaySection } from "./sections/how-to-play-section"
-import { CTASection } from "./sections/cta-section"
-import { Footer } from "./layout/footer"
+import { Navbar } from "@/components/layout/navbar"
+import { HeroSection } from "@/components/sections/hero-section"
+import { FeaturesSection } from "@/components/sections/features-section"
+import { GameModesSection } from "@/components/sections/game-modes-section"
+import { HowToPlaySection } from "@/components/sections/how-to-play-section"
+import { CTASection } from "@/components/sections/cta-section"
+import { Footer } from "@/components/layout/footer"
 
 export function LandingPage() {
   return (
