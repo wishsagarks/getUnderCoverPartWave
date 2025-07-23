@@ -165,7 +165,7 @@ export function Footer() {
               <span>Cookies</span>
             </div>
           </div>
-        </div>
+        </motion.div>
       </div>
     </footer>
   )
