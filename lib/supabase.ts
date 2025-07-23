@@ -1,7 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder-anon-key';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || 'placeholder-service-role-key';
+
+// Check if Supabase is properly configured
+const isSupabaseConfigured = 
+  process.env.NEXT_PUBLIC_SUPABASE_URL && 
+  process.env.NEXT_PUBLIC_SUPABASE_URL !== 'https://your-project.supabase.co' &&
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY && 
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY !== 'your_supabase_anon_key_here';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
@@ -14,9 +22,11 @@ export const createClientComponentClient = () => {
 export const createServerComponentClient = () => {
   return createClient(
     supabaseUrl,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    supabaseServiceRoleKey
   );
 };
+
+export { isSupabaseConfigured };
 
 // Database types
 export interface Database {
