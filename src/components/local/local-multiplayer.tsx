@@ -38,6 +38,9 @@ import {
   Volume2
 } from "lucide-react"
 import { SingleDeviceGame } from "@/components/local/single-device-game"
+
+interface Player {
+  id: string
   name: string
   avatar: string
   role: 'civilian' | 'undercover' | 'mrx'
@@ -792,5 +795,59 @@ export function LocalMultiplayer() {
               {/* Role & Word Reveal Modal */}
               <AnimatePresence>
                 {showWord && currentRevealPlayer && (
-  return <SingleDeviceGame />
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.8 }}
+                    className="fixed inset-0 bg-black/80 flex items-center justify-center z-50"
+                  >
+                    <Card className="max-w-md mx-4 bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                      <Meteors number={20} />
+                      <CardHeader className="text-center">
+                        <div className="text-4xl mb-4">{currentRevealPlayer.avatar}</div>
+                        <CardTitle className="text-xl text-white">{currentRevealPlayer.name}</CardTitle>
+                        <Badge 
+                          className={
+                            currentRevealPlayer.role === 'civilian' ? 'bg-blue-500' :
+                            currentRevealPlayer.role === 'undercover' ? 'bg-red-500' : 'bg-yellow-500'
+                          }
+                        >
+                          {currentRevealPlayer.role === 'civilian' ? 'Civilian' :
+                           currentRevealPlayer.role === 'undercover' ? 'Undercover' : 'Mr. X'}
+                        </Badge>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {currentRevealPlayer.role !== 'mrx' && (
+                          <div className="text-center p-6 bg-white/5 rounded-lg border border-white/10">
+                            <div className="text-sm text-slate-300 mb-2">Your word is:</div>
+                            <div className="text-3xl font-bold text-white">{currentRevealPlayer.word}</div>
+                          </div>
+                        )}
+                        
+                        {currentRevealPlayer.role === 'mrx' && (
+                          <div className="text-center p-6 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+                            <div className="text-sm text-yellow-200 mb-2">You are Mr. X!</div>
+                            <div className="text-lg text-yellow-100">
+                              Listen carefully and guess the civilian word to win instantly!
+                            </div>
+                          </div>
+                        )}
+                        
+                        <Button 
+                          onClick={proceedToNextReveal}
+                          className="w-full bg-green-500 hover:bg-green-600"
+                        >
+                          {currentPlayerIndex < players.length - 1 ? 'Next Player' : 'Start Game'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    </div>
+  )
 }
