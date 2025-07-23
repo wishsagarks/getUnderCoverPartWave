@@ -80,7 +80,6 @@ export function SignInPage() {
           </Card>
         </motion.div>
       </LampContainer>
-      </div>
     )
   }
 
