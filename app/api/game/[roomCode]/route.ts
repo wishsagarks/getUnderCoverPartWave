@@ -1,57 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@/lib/supabase';
+import { getCurrentUser } from '@/lib/auth';
+import { getRoomByCode, getPlayersInRoom, getVotesInRoom } from '@/lib/database';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { roomCode: string } }
 ) {
   try {
-    const supabase = createServerComponentClient();
+    const authHeader = request.headers.get('authorization');
+    const token = authHeader?.replace('Bearer ', '');
     
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Get room data
-    const { data: room, error: roomError } = await supabase
-      .from('rooms')
-      .select('*')
-      .eq('room_code', params.roomCode)
-      .single();
+    const user = getCurrentUser(token);
+    if (!user) {
+      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
+    }
 
-    if (roomError || !room) {
+    const room = getRoomByCode(params.roomCode);
+    if (!room) {
       return NextResponse.json({ error: 'Room not found' }, { status: 404 });
     }
 
-    // Get players data
-    const { data: players, error: playersError } = await supabase
-      .from('players')
-      .select('*')
-      .eq('room_id', room.id)
-      .order('joined_at');
-
-    if (playersError) {
-      return NextResponse.json(
-        { error: playersError.message },
-        { status: 500 }
-      );
-    }
-
-    // Get votes data
-    const { data: votes, error: votesError } = await supabase
-      .from('votes')
-      .select('*')
-      .eq('room_id', room.id)
-      .eq('round', room.current_round);
-
-    if (votesError) {
-      return NextResponse.json(
-        { error: votesError.message },
-        { status: 500 }
-      );
-    }
+    const players = getPlayersInRoom(room.id);
+    const votes = getVotesInRoom(room.id, room.current_round);
 
     return NextResponse.json({ room, players, votes });
   } catch (error: any) {

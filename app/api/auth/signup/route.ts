@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerComponentClient } from '@/lib/supabase';
+import { signUp } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,29 +12,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerComponentClient();
-
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          username
-        }
-      }
-    });
-
-    if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 400 }
-      );
-    }
-
-    return NextResponse.json({ 
-      user: data.user,
-      message: 'User created successfully' 
-    });
+    const result = await signUp(email, password, username);
+    return NextResponse.json(result);
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message || 'Failed to create account' },

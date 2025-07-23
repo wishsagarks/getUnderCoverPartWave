@@ -1,14 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCurrentUser } from '@/lib/auth';
-import { createRoom, joinRoom } from '@/lib/database';
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
     const authHeader = request.headers.get('authorization');
     const token = authHeader?.replace('Bearer ', '');
     
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'No token provided' }, { status: 401 });
     }
 
     const user = getCurrentUser(token);
@@ -16,17 +15,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
-    const { maxPlayers } = await request.json();
-
-    const room = createRoom(user.id, maxPlayers || 8);
-    
-    // Add host as first player
-    joinRoom(room.id, user.id, user.username);
-
-    return NextResponse.json(room);
+    return NextResponse.json({ user });
   } catch (error: any) {
     return NextResponse.json(
-      { error: error.message || 'Failed to create room' },
+      { error: error.message || 'Failed to verify token' },
       { status: 500 }
     );
   }
