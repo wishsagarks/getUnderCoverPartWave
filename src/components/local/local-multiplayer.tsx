@@ -38,6 +38,7 @@ import {
   Volume2
 } from "lucide-react"
 import { SingleDeviceGame } from "@/components/local/single-device-game"
+import { getWordPacks } from "@/lib/supabase-local-game"
 
 interface Player {
   id: string
