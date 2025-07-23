@@ -11,9 +11,9 @@ import {
   SmartphoneIcon, 
   GlobeIcon, 
   PlayIcon,
-  ClockIcon,
-  LockIcon
 } from "@/components/aceternity/icons";
+} from "@/components/aceternity/icons";
+import { Clock, Lock } from "lucide-react";
 
 const gameModes = [
   {
@@ -147,7 +147,7 @@ export function GameModesSection() {
                             {mode.players}
                           </div>
                           <div className="flex items-center gap-1">
-                            <ClockIcon className="h-4 w-4" />
+                            <Clock className="h-4 w-4" />
                             {mode.duration}
                           </div>
                         </div>
@@ -183,7 +183,7 @@ export function GameModesSection() {
                         </Link>
                       ) : (
                         <Button disabled className="w-full bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed">
-                          <LockIcon className="h-4 w-4 mr-2" />
+                          <Lock className="h-4 w-4 mr-2" />
                           Coming Soon
                         </Button>
                       )}
