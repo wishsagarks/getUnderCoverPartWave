@@ -12,7 +12,6 @@ import {
   GlobeIcon, 
   PlayIcon,
 } from "@/components/aceternity/icons";
-} from "@/components/aceternity/icons";
 import { Clock, Lock } from "lucide-react";
 
 const gameModes = [
