@@ -845,16 +845,24 @@ export function LocalMultiplayer() {
                         {/* Only show role to Mr. X players */}
                         {currentRevealPlayer.role === 'civilian' && (
                           <div className="text-center p-6 bg-blue-500/20 rounded-lg border border-blue-500/30">
-                            <div className="text-lg text-blue-100">
-                              Remember your word and give helpful clues!
+                            <div className="text-sm text-blue-200 mb-2">Your role:</div>
+                            <div className="text-lg text-blue-100 mb-3">
+                              You are part of the majority group
+                            </div>
+                            <div className="text-sm text-blue-200">
+                              Give helpful clues about your word to help others identify the outsiders!
                             </div>
                           </div>
                         )}
                         
                         {currentRevealPlayer.role === 'undercover' && (
                           <div className="text-center p-6 bg-white/5 rounded-lg border border-white/10">
-                            <div className="text-lg text-white">
-                              Blend in with the civilians!
+                            <div className="text-sm text-slate-300 mb-2">Your role:</div>
+                            <div className="text-lg text-white mb-3">
+                              You have a different word than most players
+                            </div>
+                            <div className="text-sm text-slate-300">
+                              Try to blend in and avoid being discovered!
                             </div>
                           </div>
                         )}
@@ -903,12 +911,23 @@ export function LocalMultiplayer() {
                   {/* Host Counter Display */}
                   <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
-                      <div className="text-sm text-slate-300">Undercover</div>
+                      <div className="text-sm text-slate-400 mb-1">HOST INFO</div>
+                      <div className="text-lg font-bold text-blue-400">{players.filter(p => p.role === 'civilian').length}</div>
+                      <div className="text-xs text-slate-300">Civilians</div>
                     </div>
                     <div className="text-center">
+                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
+                      <div className="text-xs text-slate-300">Undercover Found</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="text-center">
                       <div className="text-2xl font-bold text-yellow-400">{mrXCount}</div>
-                      <div className="text-sm text-slate-300">Mr. X</div>
+                      <div className="text-xs text-slate-300">Mr. X Found</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-400">{getAlivePlayers().length}</div>
+                      <div className="text-xs text-slate-300">Players Alive</div>
                     </div>
                   </div>
 
@@ -994,12 +1013,23 @@ export function LocalMultiplayer() {
                   {/* Host Counter Display */}
                   <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
-                      <div className="text-sm text-slate-300">Undercover</div>
+                      <div className="text-sm text-slate-400 mb-1">HOST INFO</div>
+                      <div className="text-lg font-bold text-blue-400">{players.filter(p => p.role === 'civilian').length}</div>
+                      <div className="text-xs text-slate-300">Civilians</div>
                     </div>
                     <div className="text-center">
+                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
+                      <div className="text-xs text-slate-300">Undercover Found</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="text-center">
                       <div className="text-2xl font-bold text-yellow-400">{mrXCount}</div>
-                      <div className="text-sm text-slate-300">Mr. X</div>
+                      <div className="text-xs text-slate-300">Mr. X Found</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-400">{getAlivePlayers().length}</div>
+                      <div className="text-xs text-slate-300">Players Alive</div>
                     </div>
                   </div>
 
@@ -1044,12 +1074,23 @@ export function LocalMultiplayer() {
                   {/* Host Counter Display */}
                   <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
                     <div className="text-center">
-                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
-                      <div className="text-sm text-slate-300">Undercover</div>
+                      <div className="text-sm text-slate-400 mb-1">HOST INFO</div>
+                      <div className="text-lg font-bold text-blue-400">{players.filter(p => p.role === 'civilian').length}</div>
+                      <div className="text-xs text-slate-300">Civilians</div>
                     </div>
                     <div className="text-center">
+                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
+                      <div className="text-xs text-slate-300">Undercover Found</div>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="text-center">
                       <div className="text-2xl font-bold text-yellow-400">{mrXCount}</div>
-                      <div className="text-sm text-slate-300">Mr. X</div>
+                      <div className="text-xs text-slate-300">Mr. X Found</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold text-green-400">{getAlivePlayers().length}</div>
+                      <div className="text-xs text-slate-300">Players Alive</div>
                     </div>
                   </div>
 
@@ -1102,6 +1143,242 @@ export function LocalMultiplayer() {
                       </Button>
                     </div>
                   )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* PHASE 4D: ELIMINATION REVEAL */}
+          {gamePhase === 'elimination-reveal' && eliminatedThisRound && (
+            <motion.div
+              key="elimination-reveal"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={20} />
+                <CardHeader className="text-center">
+                  <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                  <CardTitle className="text-2xl text-white">Player Eliminated</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    The votes have been counted
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Eliminated Player */}
+                  <div className="text-center space-y-4">
+                    <div className="flex items-center justify-center gap-3">
+                      <span className="text-6xl opacity-50">{eliminatedThisRound.avatar}</span>
+                      <div>
+                        <div className="text-2xl font-bold text-red-400">
+                          {eliminatedThisRound.name}
+                        </div>
+                        <div className="text-sm text-slate-300">has been eliminated</div>
+                      </div>
+                    </div>
+
+                    {/* Role Reveal */}
+                    <div className="p-6 bg-white/5 rounded-lg border border-white/10">
+                      <div className="text-sm text-slate-300 mb-2">
+                        {eliminatedThisRound.name} was:
+                      </div>
+                      <Badge 
+                        className={
+                          eliminatedThisRound.role === 'civilian' ? 'bg-blue-500 text-white text-lg px-4 py-2' :
+                          eliminatedThisRound.role === 'undercover' ? 'bg-red-500 text-white text-lg px-4 py-2' : 
+                          'bg-yellow-500 text-black text-lg px-4 py-2'
+                        }
+                      >
+                        {eliminatedThisRound.role === 'civilian' ? 'Civilian' :
+                         eliminatedThisRound.role === 'undercover' ? 'Undercover' : 'Mr. X'}
+                      </Badge>
+                      {eliminatedThisRound.word && (
+                        <div className="mt-3">
+                          <div className="text-sm text-slate-400">Their word was:</div>
+                          <div className="text-xl font-bold text-white">{eliminatedThisRound.word}</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Mr. X Word Guess (if Mr. X is still alive) */}
+                    {getAlivePlayers().some(p => p.role === 'mrx') && eliminatedThisRound.role !== 'mrx' && (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
+                          <div className="text-yellow-200 font-semibold mb-2">Mr. X Final Guess</div>
+                          <div className="text-sm text-yellow-100">
+                            Any surviving Mr. X can now guess the civilian word to win instantly!
+                          </div>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          <label className="text-lg font-medium text-white">
+                            Mr. X, what is the civilian word?
+                          </label>
+                          <input
+                            type="text"
+                            value={currentInput}
+                            onChange={(e) => setCurrentInput(e.target.value)}
+                            placeholder="Enter your guess..."
+                            className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 text-center text-xl"
+                            onKeyPress={(e) => e.key === 'Enter' && handleMrXWordGuess(currentInput)}
+                          />
+                        </div>
+
+                        <div className="flex gap-3">
+                          <Button 
+                            onClick={() => handleMrXWordGuess(currentInput)}
+                            className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black"
+                            disabled={!currentInput.trim()}
+                          >
+                            Submit Guess
+                          </Button>
+                          <Button 
+                            onClick={proceedAfterElimination}
+                            variant="outline"
+                            className="flex-1 border-white/30 text-white hover:bg-white/10"
+                          >
+                            Skip Guess
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Continue Button (if no Mr. X alive or Mr. X was eliminated) */}
+                    {(!getAlivePlayers().some(p => p.role === 'mrx') || eliminatedThisRound.role === 'mrx') && (
+                      <Button 
+                        onClick={proceedAfterElimination}
+                        className="w-full bg-green-500 hover:bg-green-600"
+                      >
+                        Continue Game
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* PHASE 5: ROUND END */}
+          {gamePhase === 'round-end' && (
+            <motion.div
+              key="round-end"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={15} />
+                <CardHeader className="text-center">
+                  <Trophy className="w-16 h-16 text-orange-400 mx-auto mb-4" />
+                  <CardTitle className="text-2xl text-white">Round {currentRound} Complete</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Preparing for the next round
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="text-center space-y-4">
+                    <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+                      <div className="text-lg text-white mb-2">Round Summary</div>
+                      <div className="text-sm text-slate-300">
+                        {eliminatedThisRound ? `${eliminatedThisRound.name} was eliminated` : 'No one was eliminated'}
+                      </div>
+                      <div className="text-sm text-slate-300">
+                        {getAlivePlayers().length} players remaining
+                      </div>
+                    </div>
+
+                    <Button 
+                      onClick={startNextRound}
+                      className="w-full bg-orange-500 hover:bg-orange-600"
+                    >
+                      Start Round {currentRound + 1}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* PHASE 6: GAME END */}
+          {gamePhase === 'game-end' && (
+            <motion.div
+              key="game-end"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={25} />
+                <CardHeader className="text-center">
+                  <Crown className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                  <CardTitle className="text-3xl text-white">Game Over!</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    {checkWinCondition(players) === 'civilians' ? 'Civilians Win!' :
+                     checkWinCondition(players) === 'undercover' ? 'Undercover Wins!' :
+                     checkWinCondition(players) === 'mrx' ? 'Mr. X Wins!' : 'Game Complete!'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="text-center space-y-4">
+                    {/* Game Stats */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+                        <div className="text-2xl font-bold text-blue-400">{gameStats.totalClues}</div>
+                        <div className="text-sm text-slate-300">Total Clues</div>
+                      </div>
+                      <div className="p-4 bg-white/5 rounded-lg border border-white/10">
+                        <div className="text-2xl font-bold text-green-400">{currentRound}</div>
+                        <div className="text-sm text-slate-300">Rounds Played</div>
+                      </div>
+                    </div>
+
+                    {/* Final Player Status */}
+                    <div className="space-y-3">
+                      <h4 className="text-lg font-semibold text-white">Final Results:</h4>
+                      <div className="grid grid-cols-1 gap-2">
+                        {players.map(player => (
+                          <div key={player.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+                            player.isEliminated ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'
+                          }`}>
+                            <div className="flex items-center gap-3">
+                              <span className="text-2xl">{player.avatar}</span>
+                              <div>
+                                <div className="text-sm font-medium text-white">{player.name}</div>
+                                <div className="text-xs text-slate-400">
+                                  {player.role === 'civilian' ? 'Civilian' :
+                                   player.role === 'undercover' ? 'Undercover' : 'Mr. X'}
+                                  {player.word && ` - "${player.word}"`}
+                                </div>
+                              </div>
+                            </div>
+                            <Badge className={player.isEliminated ? 'bg-red-500' : 'bg-green-500'}>
+                              {player.isEliminated ? 'Eliminated' : 'Survived'}
+                            </Badge>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={resetGame}
+                        className="flex-1 bg-blue-500 hover:bg-blue-600"
+                      >
+                        <RotateCcw className="w-4 h-4 mr-2" />
+                        Play Again
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        className="flex-1 border-white/30 text-white hover:bg-white/10"
+                      >
+                        <Link to="/" className="flex items-center gap-2">
+                          <Home className="w-4 h-4" />
+                          Home
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
