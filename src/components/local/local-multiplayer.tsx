@@ -38,7 +38,7 @@ import {
   Volume2
 } from "lucide-react"
 import { SingleDeviceGame } from "@/components/local/single-device-game"
-import { getWordPacks, saveGameConfig, LocalGameConfig, WordPack, getRandomAvatar, assignRolesAndWords, generateSpeakingOrder } from "@/lib/supabase-local-game"
+import { getWordPacks, saveGameConfig, LocalGameConfig, WordPack, getRandomAvatar, assignRolesAndWords, generateSpeakingOrder, calculateElimination, checkWinCondition } from "@/lib/supabase-local-game"
 
 interface Player {
   id: string
@@ -106,6 +106,10 @@ export function LocalMultiplayer() {
   const [selectedVote, setSelectedVote] = useState<string>("")
   const [showPrivacyScreen, setShowPrivacyScreen] = useState(false)
   const [currentRevealPlayer, setCurrentRevealPlayer] = useState<Player | null>(null)
+
+  // Host counters
+  const [undercoverCount, setUndercoverCount] = useState(0)
+  const [mrXCount, setMrXCount] = useState(0)
 
   // Load word packs on mount
   useEffect(() => {
@@ -190,6 +194,10 @@ export function LocalMultiplayer() {
       setCurrentPlayerIndex(0)
       setCurrentRevealPlayer(playersWithRoles[0])
       setShowPrivacyScreen(true)
+      
+      // Initialize counters for host
+      setUndercoverCount(0)
+      setMrXCount(0)
     } catch (error) {
       console.error('Failed to assign roles:', error)
     } finally {
@@ -199,6 +207,15 @@ export function LocalMultiplayer() {
 
   // PHASE 3: ROLE & WORD ASSIGNMENT (Private Reveal)
   const proceedToNextReveal = () => {
+    // Update counters for host based on current player's role
+    if (currentRevealPlayer) {
+      if (currentRevealPlayer.role === 'undercover') {
+        setUndercoverCount(prev => prev + 1)
+      } else if (currentRevealPlayer.role === 'mrx') {
+        setMrXCount(prev => prev + 1)
+      }
+    }
+    
     if (currentPlayerIndex < players.length - 1) {
       const nextIndex = currentPlayerIndex + 1
       setCurrentPlayerIndex(nextIndex)
@@ -825,6 +842,23 @@ export function LocalMultiplayer() {
                           </div>
                         )}
                         
+                        {/* Only show role to Mr. X players */}
+                        {currentRevealPlayer.role === 'civilian' && (
+                          <div className="text-center p-6 bg-blue-500/20 rounded-lg border border-blue-500/30">
+                            <div className="text-lg text-blue-100">
+                              Remember your word and give helpful clues!
+                            </div>
+                          </div>
+                        )}
+                        
+                        {currentRevealPlayer.role === 'undercover' && (
+                          <div className="text-center p-6 bg-white/5 rounded-lg border border-white/10">
+                            <div className="text-lg text-white">
+                              Blend in with the civilians!
+                            </div>
+                          </div>
+                        )}
+                        
                         {currentRevealPlayer.role === 'mrx' && (
                           <div className="text-center p-6 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
                             <div className="text-sm text-yellow-200 mb-2">You are Mr. X!</div>
@@ -845,6 +879,231 @@ export function LocalMultiplayer() {
                   </motion.div>
                 )}
               </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* PHASE 4A: CLUE PHASE */}
+          {gamePhase === 'clue-phase' && (
+            <motion.div
+              key="clue-phase"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={15} />
+                <CardHeader className="text-center">
+                  <MessageCircle className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+                  <CardTitle className="text-2xl text-white">Clue Phase</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Players give one-word clues about their secret word
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Host Counter Display */}
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
+                      <div className="text-sm text-slate-300">Undercover</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-400">{mrXCount}</div>
+                      <div className="text-sm text-slate-300">Mr. X</div>
+                    </div>
+                  </div>
+
+                  {/* Current Speaker */}
+                  {getCurrentSpeakingPlayer() && (
+                    <div className="text-center space-y-4">
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="text-4xl">{getCurrentSpeakingPlayer()?.avatar}</span>
+                        <div>
+                          <div className="text-xl font-bold text-white">
+                            {getCurrentSpeakingPlayer()?.name}'s Turn
+                          </div>
+                          <div className="text-sm text-slate-300">
+                            Player {currentPlayerIndex + 1} of {speakingOrder.length}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Clue Input */}
+                      <div className="space-y-3">
+                        <label className="text-lg font-medium text-white">
+                          Give a one-word clue:
+                        </label>
+                        <input
+                          type="text"
+                          value={currentInput}
+                          onChange={(e) => setCurrentInput(e.target.value)}
+                          placeholder="Enter your clue..."
+                          className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-xl"
+                          onKeyPress={(e) => e.key === 'Enter' && submitClue()}
+                          autoFocus
+                        />
+                      </div>
+
+                      <Button 
+                        onClick={submitClue}
+                        className="w-full bg-blue-500 hover:bg-blue-600"
+                        disabled={!currentInput.trim()}
+                      >
+                        Submit Clue
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Progress */}
+                  <div className="w-full bg-gray-700 rounded-full h-2">
+                    <div 
+                      className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
+                      style={{ width: `${((currentPlayerIndex + 1) / speakingOrder.length) * 100}%` }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* PHASE 4B: DISCUSSION PHASE */}
+          {gamePhase === 'discussion-phase' && (
+            <motion.div
+              key="discussion-phase"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={10} />
+                <CardHeader className="text-center">
+                  <Timer className="w-16 h-16 text-orange-400 mx-auto mb-4" />
+                  <CardTitle className="text-2xl text-white">Discussion Phase</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Discuss the clues and decide who to vote out
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Timer */}
+                  <div className="text-center">
+                    <div className="text-6xl font-bold text-orange-400 mb-2">
+                      {Math.floor(discussionTimeLeft / 60)}:{(discussionTimeLeft % 60).toString().padStart(2, '0')}
+                    </div>
+                    <div className="text-sm text-slate-300">Time remaining</div>
+                  </div>
+
+                  {/* Host Counter Display */}
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
+                      <div className="text-sm text-slate-300">Undercover</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-400">{mrXCount}</div>
+                      <div className="text-sm text-slate-300">Mr. X</div>
+                    </div>
+                  </div>
+
+                  <div className="text-center p-6 bg-orange-500/20 rounded-lg border border-orange-500/30">
+                    <p className="text-orange-100">
+                      Discuss the clues given by each player. Who seems suspicious?
+                    </p>
+                  </div>
+
+                  <Button 
+                    onClick={() => {
+                      setGamePhase('voting-phase')
+                      setCurrentPlayerIndex(0)
+                    }}
+                    className="w-full bg-orange-500 hover:bg-orange-600"
+                  >
+                    Skip to Voting
+                  </Button>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {/* PHASE 4C: VOTING PHASE */}
+          {gamePhase === 'voting-phase' && (
+            <motion.div
+              key="voting-phase"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+            >
+              <Card className="bg-white/10 backdrop-blur-xl border border-white/20 overflow-hidden">
+                <Meteors number={15} />
+                <CardHeader className="text-center">
+                  <Vote className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                  <CardTitle className="text-2xl text-white">Voting Phase</CardTitle>
+                  <CardDescription className="text-slate-300">
+                    Each player votes to eliminate someone
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Host Counter Display */}
+                  <div className="grid grid-cols-2 gap-4 p-4 bg-white/5 rounded-lg border border-white/10">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-red-400">{undercoverCount}</div>
+                      <div className="text-sm text-slate-300">Undercover</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-yellow-400">{mrXCount}</div>
+                      <div className="text-sm text-slate-300">Mr. X</div>
+                    </div>
+                  </div>
+
+                  {/* Current Voter */}
+                  {getAlivePlayers()[currentPlayerIndex] && (
+                    <div className="text-center space-y-4">
+                      <div className="flex items-center justify-center gap-3">
+                        <span className="text-4xl">{getAlivePlayers()[currentPlayerIndex]?.avatar}</span>
+                        <div>
+                          <div className="text-xl font-bold text-white">
+                            {getAlivePlayers()[currentPlayerIndex]?.name}'s Vote
+                          </div>
+                          <div className="text-sm text-slate-300">
+                            Voter {currentPlayerIndex + 1} of {getAlivePlayers().length}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Vote Options */}
+                      <div className="space-y-3">
+                        <label className="text-lg font-medium text-white">
+                          Who do you want to eliminate?
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          {getAlivePlayers()
+                            .filter(p => p.id !== getAlivePlayers()[currentPlayerIndex]?.id)
+                            .map(player => (
+                            <button
+                              key={player.id}
+                              onClick={() => setSelectedVote(player.id)}
+                              className={`p-3 rounded-lg border transition-all ${
+                                selectedVote === player.id
+                                  ? 'bg-red-500/30 border-red-500'
+                                  : 'bg-white/5 border-white/20 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="text-2xl mb-1">{player.avatar}</div>
+                              <div className="text-sm text-white">{player.name}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <Button 
+                        onClick={submitVote}
+                        className="w-full bg-red-500 hover:bg-red-600"
+                        disabled={!selectedVote}
+                      >
+                        Submit Vote
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </motion.div>
           )}
         </AnimatePresence>
