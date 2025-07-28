@@ -20,14 +20,15 @@ function App() {
           <Route path="/signup" element={<SignUpPage />} />
           <Route path="/game" element={<GameDashboard />} />
           <Route path="/game/create" element={<CreateRoom />} />
-          {/* <Route path="/game/join" element={<JoinRoom />} /> */}
-          {/* <Route path="/game/:roomCode" element={<GameLobby />} /> */}
-          {/* <Route path="/local" element={<LocalMultiplayer />} />
-          <Route path="/local/single-device" element={<SingleDeviceGame />} /> */}
+          <Route path="/game/join" element={<JoinRoom />} />
+          <Route path="/game/:roomCode" element={<GameLobby />} />
+          <Route path="/local" element={<LocalMultiplayer />} />
+          <Route path="/local/single-device" element={<SingleDeviceGame />} /> 
         </Routes>
       </div>
     </AuthProvider>
   )
 }
+
 
 export default App

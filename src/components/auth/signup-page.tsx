@@ -24,17 +24,30 @@ export function SignUpPage() {
 
     setLoading(true)
     setError("")
-
-    const { error } = await signUp(email, password, username)
+    setSuccess(false) 
+    //
+    const { data, error } = await signUp(email, password, username)
     
+    setLoading(false) // Stop loading indicator once the request is complete
+
     if (error) {
+      // This catches explicit errors from Supabase (e.g., password too short, invalid email format).
       setError(error.message)
-    } else {
+    } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+      // THIS IS THE KEY FIX: Supabase returns a user with no identities if the email
+      // is already registered but the user hasn't confirmed their email address.
+      // We catch this specific case and show an appropriate message.
+      setError("A user with this email already exists. Please sign in or check your inbox to confirm your account.")
+    } else if (data.user) {
+      // This is a successful sign-up. The user object is returned and identities are present.
+      // NOTE: You might want to redirect to a "Please confirm your email" page here.
       setSuccess(true)
       setTimeout(() => navigate("/game"), 2000)
+    } else {
+      // Fallback for any other unexpected case where there's no error but no user data.
+      setError("An unknown error occurred. Please try again.")
     }
-    
-    setLoading(false)
+    // ============================= FIX ENDS HERE =============================
   }
 
   if (!isConfigured) {
@@ -51,10 +64,10 @@ export function SignUpPage() {
             <p className="text-sm text-gray-600 dark:text-gray-400">
               To use online multiplayer features, please configure your Supabase environment variables.
             </p>
-            <Button className="w-full">
+            <Button className="w-full" asChild>
               <Link to="/local">Play Local Game Instead</Link>
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button variant="outline" className="w-full" asChild>
               <Link to="/">Back to Home</Link>
             </Button>
           </CardContent>
@@ -70,7 +83,7 @@ export function SignUpPage() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl text-green-600">Welcome!</CardTitle>
             <CardDescription>
-              Your account has been created successfully. Redirecting to game dashboard...
+              Your account has been created. Please check your email to verify your account.
             </CardDescription>
           </CardHeader>
         </Card>
