@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,33 +7,37 @@ import { Meteors } from "@/components/ui/meteors"
 import { Spotlight } from "@/components/ui/spotlight"
 import { BackgroundBeams } from "@/components/ui/background-beams"
 import { Link } from "react-router-dom"
-// FIX 1: Removed duplicate 'Users' import and added missing icons.
-import {
-  ArrowLeft,
-  Users,
-  Eye,
-  EyeOff,
-  Play,
+import { 
+  ArrowLeft, 
+  Users, 
+  Eye, 
+  EyeOff, 
+  Play, 
+  RotateCcw, 
   Trophy,
+  Clock,
   Target,
   Shield,
+  Zap,
+  Settings,
+  Crown,
+  Sparkles,
   Timer,
   Vote,
   MessageCircle,
   Star,
+  Award,
+  Gamepad2,
   UserPlus,
   Shuffle,
+  Share2,
+  Home,
   ChevronRight,
   CheckCircle,
   AlertCircle,
-  Volume2,
-  Settings,    // Added
-  Sparkles,    // Added
-  Gamepad2,    // Added
-  Crown,       // Added
-  RotateCcw,   // Added
-  Home         // Added
+  Volume2
 } from "lucide-react"
+import { SingleDeviceGame } from "@/components/local/single-device-game"
 import { getWordPacks, saveGameConfig, LocalGameConfig, WordPack, getRandomAvatar, assignRolesAndWords, generateSpeakingOrder, calculateElimination, checkWinCondition } from "@/lib/supabase-local-game"
 
 interface Player {
@@ -61,25 +65,6 @@ interface GameStats {
   mvpPlayer?: string
 }
 
-// FIX 2: Corrected GamePhase types to match the values used in the component state.
-type GamePhase = 'host-config' | 'player-onboarding' | 'role-assignment' | 'clue-phase' | 'discussion-phase' | 'voting-phase' | 'elimination-reveal' | 'round-end' | 'game-end'
-
-interface GameConfig {
-  playerCount: number
-  undercoverCount: number
-  mrXCount: number
-  wordPackId: string
-  rounds: number
-  spectatorVoting: boolean
-  minigamesEnabled: boolean
-  observerMode: boolean
-  discussionTimer: boolean
-  discussionTimeMinutes: number // FIX 3: Added missing property to the interface.
-  animatedScoreboard: boolean
-}
-
-// FIX 4: Removed the duplicate and conflicting 'Player' interface definition.
-
 export function LocalMultiplayer() {
   // Game State
   const [gamePhase, setGamePhase] = useState<GamePhase>('host-config')
@@ -96,12 +81,12 @@ export function LocalMultiplayer() {
     discussionTimeMinutes: 2,
     animatedScoreboard: true
   })
-
+  
   const [players, setPlayers] = useState<Player[]>([])
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0)
   const [currentRound, setCurrentRound] = useState(1)
   const [speakingOrder, setSpeakingOrder] = useState<string[]>([])
-  const [votes, setVotes] = useState<{ [playerId: string]: string }>({})
+  const [votes, setVotes] = useState<{[playerId: string]: string}>({})
   const [eliminatedThisRound, setEliminatedThisRound] = useState<Player | null>(null)
   const [gameStats, setGameStats] = useState<GameStats>({
     totalClues: 0,
@@ -111,7 +96,7 @@ export function LocalMultiplayer() {
     undercoverWins: 0,
     roundsPlayed: 0
   })
-
+  
   // UI State
   const [wordPacks, setWordPacks] = useState<WordPack[]>([])
   const [loading, setLoading] = useState(false)
@@ -141,7 +126,6 @@ export function LocalMultiplayer() {
 
   // Discussion timer
   useEffect(() => {
-    // The check for 'discussion-phase' is now consistent with the GamePhase type.
     if (discussionTimeLeft > 0 && gamePhase === 'discussion-phase') {
       const timer = setTimeout(() => {
         setDiscussionTimeLeft(discussionTimeLeft - 1)
@@ -201,16 +185,16 @@ export function LocalMultiplayer() {
       // Assign roles and words
       const playersWithRoles = await assignRolesAndWords(players, config)
       setPlayers(playersWithRoles)
-
+      
       // Generate speaking order (Mr. X never first)
       const order = generateSpeakingOrder(playersWithRoles)
       setSpeakingOrder(order)
-
+      
       setGamePhase('role-assignment')
       setCurrentPlayerIndex(0)
       setCurrentRevealPlayer(playersWithRoles[0])
       setShowPrivacyScreen(true)
-
+      
       // Initialize counters for host
       setUndercoverCount(0)
       setMrXCount(0)
@@ -231,7 +215,7 @@ export function LocalMultiplayer() {
         setMrXCount(prev => prev + 1)
       }
     }
-
+    
     if (currentPlayerIndex < players.length - 1) {
       const nextIndex = currentPlayerIndex + 1
       setCurrentPlayerIndex(nextIndex)
@@ -252,12 +236,12 @@ export function LocalMultiplayer() {
     if (!currentInput.trim()) return
 
     const speakingPlayerId = speakingOrder[currentPlayerIndex]
-    const updatedPlayers = players.map(p =>
-      p.id === speakingPlayerId
+    const updatedPlayers = players.map(p => 
+      p.id === speakingPlayerId 
         ? { ...p, cluesGiven: [...p.cluesGiven, currentInput.trim()] }
         : p
     )
-
+    
     setPlayers(updatedPlayers)
     setGameStats(prev => ({ ...prev, totalClues: prev.totalClues + 1 }))
     setCurrentInput("")
@@ -283,13 +267,13 @@ export function LocalMultiplayer() {
 
     const alivePlayers = players.filter(p => !p.isEliminated)
     const votingPlayer = alivePlayers[currentPlayerIndex]
-
+    
     const newVotes = { ...votes, [votingPlayer.id]: selectedVote }
     setVotes(newVotes)
     setSelectedVote("")
 
     // Update player as having voted
-    const updatedPlayers = players.map(p =>
+    const updatedPlayers = players.map(p => 
       p.id === votingPlayer.id ? { ...p, hasVoted: true } : p
     )
     setPlayers(updatedPlayers)
@@ -300,13 +284,13 @@ export function LocalMultiplayer() {
       const eliminatedPlayer = calculateElimination(newVotes, players)
       if (eliminatedPlayer) {
         setEliminatedThisRound(eliminatedPlayer)
-
+        
         // Mark player as eliminated
-        const finalPlayers = players.map(p =>
+        const finalPlayers = players.map(p => 
           p.id === eliminatedPlayer.id ? { ...p, isEliminated: true } : p
         )
         setPlayers(finalPlayers)
-
+        
         setGamePhase('elimination-reveal')
       }
     } else {
@@ -319,7 +303,7 @@ export function LocalMultiplayer() {
   const handleMrXWordGuess = (guess: string) => {
     const civilianWord = players.find(p => p.role === 'civilian')?.word?.toLowerCase()
     const isCorrect = guess.toLowerCase() === civilianWord
-
+    
     if (isCorrect) {
       // Mr. X wins immediately
       setGameStats(prev => ({ ...prev, mrXWins: prev.mrXWins + 1 }))
@@ -334,7 +318,7 @@ export function LocalMultiplayer() {
   const proceedAfterElimination = () => {
     // Check win conditions
     const winner = checkWinCondition(players)
-
+    
     if (winner) {
       setGameStats(prev => ({
         ...prev,
@@ -356,16 +340,16 @@ export function LocalMultiplayer() {
     setCurrentRound(currentRound + 1)
     setVotes({})
     setEliminatedThisRound(null)
-
+    
     // Reset player voting status
     const resetPlayers = players.map(p => ({ ...p, hasVoted: false }))
     setPlayers(resetPlayers)
-
+    
     // Generate new speaking order
     const alivePlayers = resetPlayers.filter(p => !p.isEliminated)
     const newOrder = generateSpeakingOrder(alivePlayers)
     setSpeakingOrder(newOrder)
-
+    
     setGamePhase('clue-phase')
     setCurrentPlayerIndex(0)
   }
@@ -407,7 +391,7 @@ export function LocalMultiplayer() {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-blue-900 relative overflow-hidden">
       <Spotlight className="-top-40 left-0 md:left-60 md:-top-20" fill="rgba(147, 51, 234, 0.3)" />
       <BackgroundBeams />
-
+      
       <div className="max-w-4xl mx-auto px-4 py-8 relative z-10">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
@@ -420,9 +404,9 @@ export function LocalMultiplayer() {
           <div className="text-center">
             <h1 className="text-xl font-bold text-white">
               {gamePhase === 'host-config' ? 'Game Setup' :
-                gamePhase === 'player-onboarding' ? 'Add Players' :
-                  gamePhase === 'role-assignment' ? 'Role Assignment' :
-                    `Round ${currentRound}`}
+               gamePhase === 'player-onboarding' ? 'Add Players' :
+               gamePhase === 'role-assignment' ? 'Role Assignment' :
+               `Round ${currentRound}`}
             </h1>
             <p className="text-sm text-slate-300 capitalize">
               {gamePhase.replace('-', ' ')}
@@ -523,19 +507,20 @@ export function LocalMultiplayer() {
                       {wordPacks.map((pack) => (
                         <Card
                           key={pack.id}
-                          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${config.wordPackId === pack.id
+                          className={`cursor-pointer transition-all duration-200 hover:shadow-lg ${
+                            config.wordPackId === pack.id
                               ? 'ring-2 ring-purple-500 bg-purple-500/20'
                               : 'bg-white/5 hover:bg-white/10'
-                            } border border-white/20`}
+                          } border border-white/20`}
                           onClick={() => setConfig({ ...config, wordPackId: pack.id })}
                         >
                           <CardHeader className="pb-2">
                             <div className="flex items-center justify-between">
                               <CardTitle className="text-sm text-white">{pack.title}</CardTitle>
-                              <Badge
+                              <Badge 
                                 className={
                                   pack.difficulty === 'easy' ? 'bg-green-500' :
-                                    pack.difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
+                                  pack.difficulty === 'medium' ? 'bg-yellow-500' : 'bg-red-500'
                                 }
                               >
                                 {pack.difficulty}
@@ -566,8 +551,8 @@ export function LocalMultiplayer() {
                           key={rounds}
                           variant={config.rounds === rounds ? "default" : "outline"}
                           onClick={() => setConfig({ ...config, rounds })}
-                          className={config.rounds === rounds ?
-                            "bg-purple-500 hover:bg-purple-600" :
+                          className={config.rounds === rounds ? 
+                            "bg-purple-500 hover:bg-purple-600" : 
                             "border-white/30 text-white hover:bg-white/10"
                           }
                         >
@@ -601,11 +586,13 @@ export function LocalMultiplayer() {
                           </div>
                           <button
                             onClick={() => setConfig({ ...config, [key]: !config[key as keyof GameConfig] })}
-                            className={`w-12 h-6 rounded-full transition-colors ${config[key as keyof GameConfig] ? 'bg-purple-500' : 'bg-gray-600'
-                              }`}
+                            className={`w-12 h-6 rounded-full transition-colors ${
+                              config[key as keyof GameConfig] ? 'bg-purple-500' : 'bg-gray-600'
+                            }`}
                           >
-                            <div className={`w-5 h-5 bg-white rounded-full transition-transform ${config[key as keyof GameConfig] ? 'translate-x-6' : 'translate-x-0.5'
-                              }`} />
+                            <div className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                              config[key as keyof GameConfig] ? 'translate-x-6' : 'translate-x-0.5'
+                            }`} />
                           </button>
                         </div>
                       ))}
@@ -645,8 +632,8 @@ export function LocalMultiplayer() {
                     </p>
                   </div>
 
-                  <Button
-                    onClick={startPlayerOnboarding}
+                  <Button 
+                    onClick={startPlayerOnboarding} 
                     className="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600 text-white py-3 text-lg font-semibold"
                     disabled={loading}
                   >
@@ -687,7 +674,7 @@ export function LocalMultiplayer() {
                 <CardContent className="space-y-6">
                   {/* Progress Bar */}
                   <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
+                    <div 
                       className="bg-gradient-to-r from-green-500 to-blue-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${(players.length / config.playerCount) * 100}%` }}
                     />
@@ -732,8 +719,8 @@ export function LocalMultiplayer() {
                           autoFocus
                         />
                       </div>
-                      <Button
-                        onClick={addPlayer}
+                      <Button 
+                        onClick={addPlayer} 
                         className="w-full bg-green-500 hover:bg-green-600"
                         disabled={!currentInput.trim()}
                       >
@@ -755,9 +742,9 @@ export function LocalMultiplayer() {
                           Host, please review the full player list before starting the game.
                         </p>
                       </div>
-
-                      <Button
-                        onClick={startRoleAssignment}
+                      
+                      <Button 
+                        onClick={startRoleAssignment} 
                         className="w-full bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white py-3 text-lg font-semibold"
                         disabled={loading}
                       >
@@ -805,16 +792,16 @@ export function LocalMultiplayer() {
                         Are you {currentRevealPlayer.name}?
                       </p>
                       <p className="text-sm text-slate-300">
-                        Only {currentRevealPlayer.name} should see their role and word.
+                        Only {currentRevealPlayer.name} should see their role and word. 
                         Make sure others are looking away!
                       </p>
                     </div>
-
-                    <Button
+                    
+                    <Button 
                       onClick={() => {
                         setShowPrivacyScreen(false)
                         setShowWord(true)
-                      }}
+                      }} 
                       className="w-full bg-blue-500 hover:bg-blue-600"
                     >
                       Yes, I am {currentRevealPlayer.name}
@@ -837,14 +824,14 @@ export function LocalMultiplayer() {
                       <CardHeader className="text-center">
                         <div className="text-4xl mb-4">{currentRevealPlayer.avatar}</div>
                         <CardTitle className="text-xl text-white">{currentRevealPlayer.name}</CardTitle>
-                        <Badge
+                        <Badge 
                           className={
                             currentRevealPlayer.role === 'civilian' ? 'bg-blue-500' :
-                              currentRevealPlayer.role === 'undercover' ? 'bg-red-500' : 'bg-yellow-500'
+                            currentRevealPlayer.role === 'undercover' ? 'bg-red-500' : 'bg-yellow-500'
                           }
                         >
                           {currentRevealPlayer.role === 'civilian' ? 'Civilian' :
-                            currentRevealPlayer.role === 'undercover' ? 'Undercover' : 'Mr. X'}
+                           currentRevealPlayer.role === 'undercover' ? 'Undercover' : 'Mr. X'}
                         </Badge>
                       </CardHeader>
                       <CardContent className="space-y-6">
@@ -854,7 +841,7 @@ export function LocalMultiplayer() {
                             <div className="text-3xl font-bold text-white">{currentRevealPlayer.word}</div>
                           </div>
                         )}
-
+                        
                         {/* Only show role to Mr. X players */}
                         {currentRevealPlayer.role === 'civilian' && (
                           <div className="text-center p-6 bg-blue-500/20 rounded-lg border border-blue-500/30">
@@ -867,7 +854,7 @@ export function LocalMultiplayer() {
                             </div>
                           </div>
                         )}
-
+                        
                         {currentRevealPlayer.role === 'undercover' && (
                           <div className="text-center p-6 bg-white/5 rounded-lg border border-white/10">
                             <div className="text-sm text-slate-300 mb-2">Your role:</div>
@@ -879,7 +866,7 @@ export function LocalMultiplayer() {
                             </div>
                           </div>
                         )}
-
+                        
                         {currentRevealPlayer.role === 'mrx' && (
                           <div className="text-center p-6 bg-yellow-500/20 rounded-lg border border-yellow-500/30">
                             <div className="text-sm text-yellow-200 mb-2">You are Mr. X!</div>
@@ -888,8 +875,8 @@ export function LocalMultiplayer() {
                             </div>
                           </div>
                         )}
-
-                        <Button
+                        
+                        <Button 
                           onClick={proceedToNextReveal}
                           className="w-full bg-green-500 hover:bg-green-600"
                         >
@@ -975,7 +962,7 @@ export function LocalMultiplayer() {
                         />
                       </div>
 
-                      <Button
+                      <Button 
                         onClick={submitClue}
                         className="w-full bg-blue-500 hover:bg-blue-600"
                         disabled={!currentInput.trim()}
@@ -987,7 +974,7 @@ export function LocalMultiplayer() {
 
                   {/* Progress */}
                   <div className="w-full bg-gray-700 rounded-full h-2">
-                    <div
+                    <div 
                       className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${((currentPlayerIndex + 1) / speakingOrder.length) * 100}%` }}
                     />
@@ -1052,7 +1039,7 @@ export function LocalMultiplayer() {
                     </p>
                   </div>
 
-                  <Button
+                  <Button 
                     onClick={() => {
                       setGamePhase('voting-phase')
                       setCurrentPlayerIndex(0)
@@ -1131,22 +1118,23 @@ export function LocalMultiplayer() {
                           {getAlivePlayers()
                             .filter(p => p.id !== getAlivePlayers()[currentPlayerIndex]?.id)
                             .map(player => (
-                              <button
-                                key={player.id}
-                                onClick={() => setSelectedVote(player.id)}
-                                className={`p-3 rounded-lg border transition-all ${selectedVote === player.id
-                                    ? 'bg-red-500/30 border-red-500'
-                                    : 'bg-white/5 border-white/20 hover:bg-white/10'
-                                  }`}
-                              >
-                                <div className="text-2xl mb-1">{player.avatar}</div>
-                                <div className="text-sm text-white">{player.name}</div>
-                              </button>
-                            ))}
+                            <button
+                              key={player.id}
+                              onClick={() => setSelectedVote(player.id)}
+                              className={`p-3 rounded-lg border transition-all ${
+                                selectedVote === player.id
+                                  ? 'bg-red-500/30 border-red-500'
+                                  : 'bg-white/5 border-white/20 hover:bg-white/10'
+                              }`}
+                            >
+                              <div className="text-2xl mb-1">{player.avatar}</div>
+                              <div className="text-sm text-white">{player.name}</div>
+                            </button>
+                          ))}
                         </div>
                       </div>
 
-                      <Button
+                      <Button 
                         onClick={submitVote}
                         className="w-full bg-red-500 hover:bg-red-600"
                         disabled={!selectedVote}
@@ -1195,15 +1183,15 @@ export function LocalMultiplayer() {
                       <div className="text-sm text-slate-300 mb-2">
                         {eliminatedThisRound.name} was:
                       </div>
-                      <Badge
+                      <Badge 
                         className={
                           eliminatedThisRound.role === 'civilian' ? 'bg-blue-500 text-white text-lg px-4 py-2' :
-                            eliminatedThisRound.role === 'undercover' ? 'bg-red-500 text-white text-lg px-4 py-2' :
-                              'bg-yellow-500 text-black text-lg px-4 py-2'
+                          eliminatedThisRound.role === 'undercover' ? 'bg-red-500 text-white text-lg px-4 py-2' : 
+                          'bg-yellow-500 text-black text-lg px-4 py-2'
                         }
                       >
                         {eliminatedThisRound.role === 'civilian' ? 'Civilian' :
-                          eliminatedThisRound.role === 'undercover' ? 'Undercover' : 'Mr. X'}
+                         eliminatedThisRound.role === 'undercover' ? 'Undercover' : 'Mr. X'}
                       </Badge>
                       {eliminatedThisRound.word && (
                         <div className="mt-3">
@@ -1222,7 +1210,7 @@ export function LocalMultiplayer() {
                             Any surviving Mr. X can now guess the civilian word to win instantly!
                           </div>
                         </div>
-
+                        
                         <div className="space-y-3">
                           <label className="text-lg font-medium text-white">
                             Mr. X, what is the civilian word?
@@ -1238,14 +1226,14 @@ export function LocalMultiplayer() {
                         </div>
 
                         <div className="flex gap-3">
-                          <Button
+                          <Button 
                             onClick={() => handleMrXWordGuess(currentInput)}
                             className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black"
                             disabled={!currentInput.trim()}
                           >
                             Submit Guess
                           </Button>
-                          <Button
+                          <Button 
                             onClick={proceedAfterElimination}
                             variant="outline"
                             className="flex-1 border-white/30 text-white hover:bg-white/10"
@@ -1258,7 +1246,7 @@ export function LocalMultiplayer() {
 
                     {/* Continue Button (if no Mr. X alive or Mr. X was eliminated) */}
                     {(!getAlivePlayers().some(p => p.role === 'mrx') || eliminatedThisRound.role === 'mrx') && (
-                      <Button
+                      <Button 
                         onClick={proceedAfterElimination}
                         className="w-full bg-green-500 hover:bg-green-600"
                       >
@@ -1300,7 +1288,7 @@ export function LocalMultiplayer() {
                       </div>
                     </div>
 
-                    <Button
+                    <Button 
                       onClick={startNextRound}
                       className="w-full bg-orange-500 hover:bg-orange-600"
                     >
@@ -1327,8 +1315,8 @@ export function LocalMultiplayer() {
                   <CardTitle className="text-3xl text-white">Game Over!</CardTitle>
                   <CardDescription className="text-slate-300">
                     {checkWinCondition(players) === 'civilians' ? 'Civilians Win!' :
-                      checkWinCondition(players) === 'undercover' ? 'Undercover Wins!' :
-                        checkWinCondition(players) === 'mrx' ? 'Mr. X Wins!' : 'Game Complete!'}
+                     checkWinCondition(players) === 'undercover' ? 'Undercover Wins!' :
+                     checkWinCondition(players) === 'mrx' ? 'Mr. X Wins!' : 'Game Complete!'}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -1350,15 +1338,16 @@ export function LocalMultiplayer() {
                       <h4 className="text-lg font-semibold text-white">Final Results:</h4>
                       <div className="grid grid-cols-1 gap-2">
                         {players.map(player => (
-                          <div key={player.id} className={`flex items-center justify-between p-3 rounded-lg border ${player.isEliminated ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'
-                            }`}>
+                          <div key={player.id} className={`flex items-center justify-between p-3 rounded-lg border ${
+                            player.isEliminated ? 'bg-red-500/10 border-red-500/30' : 'bg-green-500/10 border-green-500/30'
+                          }`}>
                             <div className="flex items-center gap-3">
                               <span className="text-2xl">{player.avatar}</span>
                               <div>
                                 <div className="text-sm font-medium text-white">{player.name}</div>
                                 <div className="text-xs text-slate-400">
                                   {player.role === 'civilian' ? 'Civilian' :
-                                    player.role === 'undercover' ? 'Undercover' : 'Mr. X'}
+                                   player.role === 'undercover' ? 'Undercover' : 'Mr. X'}
                                   {player.word && ` - "${player.word}"`}
                                 </div>
                               </div>
@@ -1372,14 +1361,14 @@ export function LocalMultiplayer() {
                     </div>
 
                     <div className="flex gap-3">
-                      <Button
+                      <Button 
                         onClick={resetGame}
                         className="flex-1 bg-blue-500 hover:bg-blue-600"
                       >
                         <RotateCcw className="w-4 h-4 mr-2" />
                         Play Again
                       </Button>
-                      <Button
+                      <Button 
                         variant="outline"
                         className="flex-1 border-white/30 text-white hover:bg-white/10"
                       >

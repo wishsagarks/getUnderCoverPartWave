@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,12 +33,21 @@ import {
 } from "lucide-react"
 import {
   LocalGameConfig,
+  LocalPlayer,
   LocalGameState,
+  WordPack,
   createLocalGame,
   getWordPacks,
+  assignRolesAndWords,
+  generateSpeakingOrder,
+  calculateElimination,
+  checkWinCondition,
   saveGameConfig,
   saveGameState,
-  getRandomAvatar
+  getRandomAvatar,
+  avatarOptions
+} from "@/lib/supabase-local-game"
+
 export function SingleDeviceGame() {
   const [gameState, setGameState] = useState<LocalGameState | null>(null)
   const [wordPacks, setWordPacks] = useState<WordPack[]>([])

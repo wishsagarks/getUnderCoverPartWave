@@ -23,7 +23,7 @@ function App() {
           <Route path="/game/join" element={<JoinRoom />} />
           <Route path="/game/:roomCode" element={<GameLobby />} />
           <Route path="/local" element={<LocalMultiplayer />} />
-          <Route path="/local/single-device" element={<SingleDeviceGame />} />
+          <Route path="/local/single-device" element={<SingleDeviceGame />} /> 
         </Routes>
       </div>
     </AuthProvider>
