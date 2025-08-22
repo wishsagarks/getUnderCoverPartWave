@@ -219,11 +219,24 @@ export const getWordPacks = async (): Promise<WordPack[]> => {
       return defaultWordPacks
     }
 
-    const { data, error } = await supabase
+    // Get current user
+    const { data: userData } = await supabase.auth.getUser()
+    const userId = userData.user?.id
+    
+    // Build query based on user authentication status
+    let query = supabase
       .from('word_packs')
       .select('*')
-      .or('is_public.eq.true,owner_id.eq.' + (await supabase.auth.getUser()).data.user?.id)
-      .order('created_at', { ascending: true })
+    
+    if (userId) {
+      // User is logged in - show public packs and their own packs
+      query = query.or(`is_public.eq.true,owner_id.eq.${userId}`)
+    } else {
+      // User is not logged in - only show public packs
+      query = query.eq('is_public', true)
+    }
+    
+    const { data, error } = await query.order('created_at', { ascending: true })
 
     if (error) {
       console.warn('Failed to fetch word packs from Supabase:', error)
