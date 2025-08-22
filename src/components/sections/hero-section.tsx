@@ -34,7 +34,7 @@ export function HeroSection() {
       
       <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-8">
         <Button size="lg" className="text-lg px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700">
-          <Link to="/local">Play Local Game</Link>
+          <Link to="/local/single-device">Play Local Game</Link>
         </Button>
         <Button variant="outline" size="lg" className="text-lg px-8 py-4 border-cyan-500 text-cyan-500 hover:bg-cyan-500 hover:text-white">
           <Link to="/signin">Sign In to Play Online</Link>

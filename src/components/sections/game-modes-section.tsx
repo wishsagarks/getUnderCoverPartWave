@@ -23,7 +23,7 @@ const gameModes = [
     ],
     difficulty: "Easy",
     setupTime: "30 seconds",
-    link: "/local"
+    link: "/local/single-device"
   },
   {
     id: "multi-device-local",

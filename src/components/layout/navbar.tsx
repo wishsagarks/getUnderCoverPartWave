@@ -14,7 +14,7 @@ export function Navbar() {
     },
     {
       name: "Local Game",
-      link: "/local",
+      link: "/local/single-device",
       icon: <Gamepad2 className="h-4 w-4 text-neutral-500 dark:text-white" />,
     },
     ...(user ? [

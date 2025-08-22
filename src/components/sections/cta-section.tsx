@@ -53,7 +53,7 @@ export function CTASection() {
                 size="lg" 
                 className="text-lg px-8 py-4 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 text-white shadow-2xl border-0 group"
               >
-                <Link to="/local" className="flex items-center gap-2">
+                <Link to="/local/single-device" className="flex items-center gap-2">
                   <Play className="w-5 h-5 group-hover:scale-110 transition-transform" />
                   Play Local Game
                 </Link>

@@ -222,7 +222,7 @@ export const getWordPacks = async (): Promise<WordPack[]> => {
     const { data, error } = await supabase
       .from('word_packs')
       .select('*')
-      .eq('is_public', true)
+      .or('is_public.eq.true,owner_id.eq.' + (await supabase.auth.getUser()).data.user?.id)
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -234,7 +234,7 @@ export const getWordPacks = async (): Promise<WordPack[]> => {
     const supabasePacks = (data || []).map(pack => {
       let wordPairs = []
       try {
-        wordPairs = (pack.content as any)?.pairs || []
+        wordPairs = pack.content?.pairs || []
       } catch (e) {
         console.warn('Failed to parse word pairs for pack:', pack.title)
         wordPairs = []
